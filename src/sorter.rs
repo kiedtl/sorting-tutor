@@ -1,20 +1,31 @@
+mod heap;
+
+use crate::for_coro;
+use crate::utils::Coro;
+
 use std::pin::Pin;
 use std::ops::{CoroutineState, Coroutine};
 
 type SortingCoro = Pin<Box<dyn Coroutine<(), Yield = List, Return = ()>>>;
 
 pub const ALGORITHMS: &[Algorithm] = &[
+    // First is default
+    Algorithm::Heap,
+    Algorithm::Bubble,
+
     Algorithm::Insertion,
+
+    Algorithm::Selection,
     Algorithm::Quick,
 ];
 
 #[derive(Copy, Clone)]
 pub enum Algorithm {
-    // Bubble,
-    // Selection,
+    Bubble,
+    Selection,
     Insertion,
     Quick,
-    //Heap,
+    Heap,
     //Stalin,
     //Merge,
     //Tim,
@@ -23,7 +34,10 @@ pub enum Algorithm {
 impl Algorithm {
     pub fn func(&self) -> fn(Box<[usize]>) -> SortingCoro {
         match self {
+            Algorithm::Bubble => |v| Box::pin(bubble(v)),
+            Algorithm::Selection => |v| Box::pin(selection(v)),
             Algorithm::Insertion => |v| Box::pin(insertion(v)),
+            Algorithm::Heap => |v| Box::pin(heap(v)),
             Algorithm::Quick => |v| Box::pin(quicksort(v)),
         }
     }
@@ -32,37 +46,12 @@ impl Algorithm {
 impl std::fmt::Display for Algorithm {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", match self {
+            Algorithm::Bubble => "bubble",
+            Algorithm::Selection => "selection",
             Algorithm::Insertion => "insertion",
+            Algorithm::Heap => "heapsort",
             Algorithm::Quick => "quicksort",
         })
-    }
-}
-
-pub struct Sorter {
-    func: SortingCoro,
-    done: bool,
-}
-
-impl Sorter {
-    pub fn new(s: SortingCoro) -> Self {
-        Self {
-            func: s,
-            done: false
-        }
-    }
-
-    pub fn iter(&mut self) -> Option<List> {
-        if self.done {
-            return None;
-        }
-
-        match self.func.as_mut().resume(()) {
-            CoroutineState::Yielded(view) => Some(view),
-            CoroutineState::Complete(_) => {
-                self.done = true;
-                None
-            },
-        }
     }
 }
 
@@ -96,6 +85,46 @@ pub type List = Box<[usize]>;
 //     }
 // }
 
+pub fn bubble(mut x: List) -> impl Coroutine<(), Yield = List, Return = ()> {
+    #[coroutine] move || {
+        let mut n = x.len();
+
+        loop {
+            let mut work_done = true;
+
+            for i in 1..n {
+                if x[i - 1] > x[i] {
+                    x.swap(i - 1, i);
+                    work_done = true;
+                    yield x.clone();
+                }
+            }
+
+            if !work_done || n == 0 {
+                break;
+            }
+
+            n -= 1;
+        }
+    }
+}
+
+pub fn selection(mut x: List) -> impl Coroutine<(), Yield = List, Return = ()> {
+    #[coroutine] move || {
+        for i in 0..(x.len() - 1) {
+            let min = x
+                .iter()
+                .enumerate()
+                .skip(i)
+                .min_by_key(|&(_, &v)| v)
+                .unwrap()
+                .0;
+            x.swap(i, min);
+            yield x.clone();
+        }
+    }
+}
+
 pub fn insertion(mut x: List) -> impl Coroutine<(), Yield = List, Return = ()> {
     #[coroutine] move || {
         for i in 1..x.len() {
@@ -111,13 +140,64 @@ pub fn insertion(mut x: List) -> impl Coroutine<(), Yield = List, Return = ()> {
     }
 }
 
+pub fn heap(mut x: List) -> impl Coroutine<(), Yield = List, Return = ()> {
+    #[coroutine] static move || {
+        let mut h = heap::Heap::new(&mut x);
+
+        for_coro!(view in build_heap(&mut h) =>
+            yield view
+        );
+
+        for i in (1..h.nodes()).rev() {
+            h.swap(heap::Node::of(0, &h), heap::Node::of(i, &h));
+            yield Box::from(h.repr());
+
+            h.abandon(1);
+            for_coro!(y in heapify(h.root(), &mut h) => yield y);
+        }
+    }
+}
+
+fn build_heap(heap: &mut heap::Heap<'_>) -> impl Coroutine<(), Yield = List, Return = ()> {
+    #[coroutine] static move || {
+        let k = heap.nodes() / 2;
+        for i in (0..k).rev() {
+            let n = heap::Node::of(i, heap);
+            for_coro!(y in heapify(n, heap) => yield y);
+        }
+    }
+}
+
+// Based on Introduction to Algorithms, 6.2
+fn heapify(
+    node: heap::Node,
+    heap: &mut heap::Heap<'_>
+) -> impl Coroutine<(), Yield = List, Return = ()>
+{
+    #[coroutine] static move || {
+        let value = node.value(heap);
+        let children = node.children(heap);
+
+        let max = [Some(node), children[0], children[1]]
+            .into_iter()
+            .filter_map(|n| n)
+            .max_by_key(|n| n.value(heap))
+            .unwrap();
+
+        if max != node {
+            heap.swap(node, max);
+            yield Box::from(heap.repr());
+            for_coro!(y in heapify(max, heap) => yield y);
+        }
+    }
+}
+
 pub fn quicksort(mut x: List) -> impl Coroutine<(), Yield = List, Return = ()> {
     #[coroutine] static move || {
         let l = x.len();
-        let mut coro = Box::pin(_quicksort(&mut x, 0, l));
-        while let CoroutineState::Yielded(y) = coro.as_mut().resume(()) {
-            yield y;
-        }
+        for_coro!(y in _quicksort(&mut x, 0, l) =>
+            yield y
+        );
     }
 }
 
@@ -130,19 +210,8 @@ pub fn _quicksort<'a>(x: &'a mut [usize], s: usize, e: usize) -> impl Coroutine<
         let pivot = s + qspartition(&mut x[s..e]);
         yield Box::from(&mut *x);
 
-        let mut coro = Box::pin(_quicksort(x, s, pivot));
-        while let CoroutineState::Yielded(y) = coro.as_mut().resume(()) {
-            yield y;
-        }
-
-        // "cannot borrow x as mutable more than one time" well yes we can because
-        // we're done with the coroutine
-        std::mem::drop(coro);
-
-        let mut coro = Box::pin(_quicksort(x, pivot + 1, e));
-        while let CoroutineState::Yielded(y) = coro.as_mut().resume(()) {
-            yield y;
-        }
+        for_coro!(y in _quicksort(x, s, pivot) => yield y);
+        for_coro!(y in _quicksort(x, pivot + 1, e) => yield y);
     }
 }
 

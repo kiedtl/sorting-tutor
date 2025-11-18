@@ -5,8 +5,10 @@
 #![feature(coroutine_trait)]
 #![feature(gen_blocks)]
 
+mod utils;
 mod sorter;
 
+use crate::utils::Coro;
 use crate::sorter::{Algorithm, ALGORITHMS, List};
 
 use std::pin::Pin;
@@ -30,19 +32,57 @@ fn Control(
     algo_w: WriteSignal<Algorithm>,
     history_r: ReadSignal<Vec<Box<[usize]>>>,
     history_w: WriteSignal<Vec<Box<[usize]>>>,
-    sorter_w: WriteSignal<sorter::Sorter, LocalStorage>,
+    sorter_w: WriteSignal<Coro<List>, LocalStorage>,
     size_r: ReadSignal<usize>,
     size_w: WriteSignal<usize>,
 ) -> impl IntoView
 {
     let (running_r, running_w) = signal(false);
-    let (delay_r, delay_w) = signal(20);
+    let (delay_r, delay_w) = signal(60);
 
     view! {
         <table>
+            <h3>"Control"</h3>
+            <tr>
+                <td>
+                    <button
+                        on:click=move |_| {
+                            if running_r.get() {
+                                running_w.set(false);
+                            } else {
+                                running_w.set(true);
+                                spawn_local(async move {
+                                    while let Some(view) = sorter_w.write().next() && running_r.get() {
+                                        history_w.write().push(view);
+                                        TimeoutFuture::new(delay_r.get() as u32).await;
+                                    }
+                                    running_w.set(false);
+                                });
+                            }
+                        }
+                    >
+                        {move || if running_r.get() { "Stop" } else { "Start" }}
+                    </button>
+                </td>
+                <td>
+                    <button
+                        on:click=move |_| {
+                            match sorter_w.write().next() {
+                                Some(view) => history_w.write().push(view),
+                                None => (),
+                            }
+                        }
+                    >
+                    "Step"
+                    </button>
+                </td>
+            </tr>
+            <h3>"Settings"</h3>
             <tr>
                 <td>
                     <label>Algorithm</label>
+                </td>
+                <td>
                     <select
                         on:change:target=move |ev| {
                             let v = ev.target().value();
@@ -71,38 +111,6 @@ fn Control(
             </tr>
             <tr>
                 <td>
-                    <button
-                        on:click=move |_| {
-                            if running_r.get() {
-                                running_w.set(false);
-                            } else {
-                                running_w.set(true);
-                                spawn_local(async move {
-                                    while let Some(view) = sorter_w.write().iter() && running_r.get() {
-                                        history_w.write().push(view);
-                                        TimeoutFuture::new(delay_r.get() as u32).await;
-                                    }
-                                    running_w.set(false);
-                                });
-                            }
-                        }
-                    >
-                        {move || if running_r.get() { "Stop" } else { "Start" }}
-                    </button>
-                    <button
-                        on:click=move |_| {
-                            match sorter_w.write().iter() {
-                                Some(view) => history_w.write().push(view),
-                                None => (),
-                            }
-                        }
-                    >
-                    "Step"
-                    </button>
-                </td>
-            </tr>
-            <tr>
-                <td>
                     <label for="Size">Size</label>
                 </td>
                 <td>
@@ -113,6 +121,9 @@ fn Control(
                             size_w.set(ev.target().value().parse().unwrap());
                         }
                     />
+                </td>
+                <td>
+                    <i>{move || size_r.get()}</i>
                 </td>
             </tr>
             <tr>
@@ -127,6 +138,9 @@ fn Control(
                             delay_w.set(ev.target().value().parse().unwrap());
                         }
                     />
+                </td>
+                <td>
+                    <i>{move || delay_r.get()}"ms"</i>
                 </td>
             </tr>
         </table>
@@ -171,15 +185,18 @@ fn App() -> impl IntoView {
     let (size_r, size_w) = signal(8);
 
     let (values_r, values_w) = signal({
-        (0..size_r.get())
+        (0..size_r.get_untracked())
             .map(|_| rng.random_range(10..99))
             .collect::<Vec<_>>()
             .into_boxed_slice()
     });
 
-    let (history_r, history_w) = signal(vec![values_r.get()]);
-    let (algo_r, algo_w) = signal(Algorithm::Insertion);
-    let (_, sorter_w) = signal_local(sorter::Sorter::new(algo_r.get().func()(values_r.get())));
+    // Need to choose the first, because the <select> element apparently chooses the first option
+    // as well(??)
+    let (algo_r, algo_w) = signal(ALGORITHMS[0]);
+
+    let (history_r, history_w) = signal(vec![values_r.get_untracked()]);
+    let (_, sorter_w) = signal_local(Coro::new(algo_r.get_untracked().func()(values_r.get_untracked())));
 
     // When size/values/algorithm changes, set values
     Effect::new(move |_| {
@@ -194,7 +211,7 @@ fn App() -> impl IntoView {
 
         history_w.write().clear();
         history_w.write().push(values_r.get());
-        sorter_w.set(sorter::Sorter::new(algo_r.get().func()(values_r.get())));
+        sorter_w.set(Coro::new(algo_r.get().func()(values_r.get())));
     });
 
     view! {
