@@ -1,12 +1,13 @@
 mod heap;
 
 use crate::for_coro;
-use crate::utils::Coro;
+use crate::utils::{Vew, Coro};
 
 use std::pin::Pin;
 use std::ops::{CoroutineState, Coroutine};
 
-type SortingCoro = Pin<Box<dyn Coroutine<(), Yield = List, Return = ()>>>;
+pub type List = Box<[usize]>;
+pub type SortingCoro = Pin<Box<dyn Coroutine<(), Yield = Vew, Return = ()>>>;
 
 pub const ALGORITHMS: &[Algorithm] = &[
     // First is default
@@ -55,8 +56,6 @@ impl std::fmt::Display for Algorithm {
     }
 }
 
-pub type List = Box<[usize]>;
-
 // pub fn insertion(x: &mut List) -> Gen<List, (), _> {
 //     r#gen!({
 //         for i in 1..x.len() {
@@ -85,7 +84,7 @@ pub type List = Box<[usize]>;
 //     }
 // }
 
-pub fn bubble(mut x: List) -> impl Coroutine<(), Yield = List, Return = ()> {
+pub fn bubble(mut x: List) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] move || {
         let mut n = x.len();
 
@@ -96,7 +95,7 @@ pub fn bubble(mut x: List) -> impl Coroutine<(), Yield = List, Return = ()> {
                 if x[i - 1] > x[i] {
                     x.swap(i - 1, i);
                     work_done = true;
-                    yield x.clone();
+                    yield Vew::from(&x);
                 }
             }
 
@@ -109,7 +108,7 @@ pub fn bubble(mut x: List) -> impl Coroutine<(), Yield = List, Return = ()> {
     }
 }
 
-pub fn selection(mut x: List) -> impl Coroutine<(), Yield = List, Return = ()> {
+pub fn selection(mut x: List) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] move || {
         for i in 0..(x.len() - 1) {
             let min = x
@@ -120,12 +119,12 @@ pub fn selection(mut x: List) -> impl Coroutine<(), Yield = List, Return = ()> {
                 .unwrap()
                 .0;
             x.swap(i, min);
-            yield x.clone();
+            yield Vew::from(&x);
         }
     }
 }
 
-pub fn insertion(mut x: List) -> impl Coroutine<(), Yield = List, Return = ()> {
+pub fn insertion(mut x: List) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] move || {
         for i in 1..x.len() {
             for j in 0..i {
@@ -134,13 +133,13 @@ pub fn insertion(mut x: List) -> impl Coroutine<(), Yield = List, Return = ()> {
                     break;
                 }
                 x.swap(j - 1, j);
-                yield x.clone();
+                yield Vew::from(&x);
             }
         }
     }
 }
 
-pub fn heap(mut x: List) -> impl Coroutine<(), Yield = List, Return = ()> {
+pub fn heap(mut x: List) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] static move || {
         let mut h = heap::Heap::new(&mut x);
 
@@ -150,7 +149,7 @@ pub fn heap(mut x: List) -> impl Coroutine<(), Yield = List, Return = ()> {
 
         for i in (1..h.nodes()).rev() {
             h.swap(heap::Node::of(0, &h), heap::Node::of(i, &h));
-            yield Box::from(h.repr());
+            yield Vew::from(h.repr());
 
             h.abandon(1);
             for_coro!(y in heapify(h.root(), &mut h) => yield y);
@@ -158,7 +157,7 @@ pub fn heap(mut x: List) -> impl Coroutine<(), Yield = List, Return = ()> {
     }
 }
 
-fn build_heap(heap: &mut heap::Heap<'_>) -> impl Coroutine<(), Yield = List, Return = ()> {
+fn build_heap(heap: &mut heap::Heap<'_>) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] static move || {
         let k = heap.nodes() / 2;
         for i in (0..k).rev() {
@@ -172,7 +171,7 @@ fn build_heap(heap: &mut heap::Heap<'_>) -> impl Coroutine<(), Yield = List, Ret
 fn heapify(
     node: heap::Node,
     heap: &mut heap::Heap<'_>
-) -> impl Coroutine<(), Yield = List, Return = ()>
+) -> impl Coroutine<(), Yield = Vew, Return = ()>
 {
     #[coroutine] static move || {
         let value = node.value(heap);
@@ -186,13 +185,13 @@ fn heapify(
 
         if max != node {
             heap.swap(node, max);
-            yield Box::from(heap.repr());
+            yield Vew::from(heap.repr());
             for_coro!(y in heapify(max, heap) => yield y);
         }
     }
 }
 
-pub fn quicksort(mut x: List) -> impl Coroutine<(), Yield = List, Return = ()> {
+pub fn quicksort(mut x: List) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] static move || {
         let l = x.len();
         for_coro!(y in _quicksort(&mut x, 0, l) =>
@@ -201,14 +200,14 @@ pub fn quicksort(mut x: List) -> impl Coroutine<(), Yield = List, Return = ()> {
     }
 }
 
-pub fn _quicksort<'a>(x: &'a mut [usize], s: usize, e: usize) -> impl Coroutine<(), Yield = List, Return = ()> {
+pub fn _quicksort<'a>(x: &'a mut [usize], s: usize, e: usize) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] static move || {
         if x[s..e].len() <= 1 {
             return;
         }
 
         let pivot = s + qspartition(&mut x[s..e]);
-        yield Box::from(&mut *x);
+        yield Vew::from(&*x);
 
         for_coro!(y in _quicksort(x, s, pivot) => yield y);
         for_coro!(y in _quicksort(x, pivot + 1, e) => yield y);

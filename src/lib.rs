@@ -8,7 +8,7 @@
 mod utils;
 mod sorter;
 
-use crate::utils::Coro;
+use crate::utils::{Vew, IsVew, Coro};
 use crate::sorter::{Algorithm, ALGORITHMS, List};
 
 use std::pin::Pin;
@@ -30,9 +30,9 @@ macro_rules! log {
 fn Control(
     algo_r: ReadSignal<Algorithm>,
     algo_w: WriteSignal<Algorithm>,
-    history_r: ReadSignal<Vec<Box<[usize]>>>,
-    history_w: WriteSignal<Vec<Box<[usize]>>>,
-    sorter_w: WriteSignal<Coro<List>, LocalStorage>,
+    history_r: ReadSignal<Vec<Vew>>,
+    history_w: WriteSignal<Vec<Vew>>,
+    sorter_w: WriteSignal<Coro<Vew>, LocalStorage>,
     size_r: ReadSignal<usize>,
     size_w: WriteSignal<usize>,
 ) -> impl IntoView
@@ -149,14 +149,14 @@ fn Control(
 
 #[component]
 fn Content(
-    history_r: ReadSignal<Vec<Box<[usize]>>>,
+    history_r: ReadSignal<Vec<Vew>>,
 ) -> impl IntoView
 {
     view!{
         <table>
             <tr>
-            {move || history_r.read().last().map(|values: &Box<[usize]>| {
-                values.iter().copied().map(|v| view! {
+            {move || history_r.read().last().map(|item| {
+                item.list().iter().copied().map(|v| view! {
                     <td style="vertical-align: bottom">
                         <div style=move || format!("background:green; height: {v}px")>
                         </div>
@@ -166,13 +166,8 @@ fn Content(
             </tr>
         </table>
         <table>
-            {move || history_r.read().iter().rev().map(|vset: &Box<[usize]>| {
-                let vs = vset.iter().copied().map(|v| view! {
-                    <td>{v}</td>
-                }).collect_view();
-                view! {
-                    <tr>{vs}</tr>
-                }
+            {move || history_r.read().iter().rev().map(|vset| {
+                vset.into_view()
             }).collect_view()}
         </table>
     }
@@ -195,7 +190,7 @@ fn App() -> impl IntoView {
     // as well(??)
     let (algo_r, algo_w) = signal(ALGORITHMS[0]);
 
-    let (history_r, history_w) = signal(vec![values_r.get_untracked()]);
+    let (history_r, history_w) = signal(vec![Vew::from(&*values_r.read_untracked())]);
     let (_, sorter_w) = signal_local(Coro::new(algo_r.get_untracked().func()(values_r.get_untracked())));
 
     // When size/values/algorithm changes, set values
@@ -210,7 +205,7 @@ fn App() -> impl IntoView {
         }
 
         history_w.write().clear();
-        history_w.write().push(values_r.get());
+        history_w.write().push(Vew::from(&*values_r.read_untracked()));
         sorter_w.set(Coro::new(algo_r.get().func()(values_r.get())));
     });
 

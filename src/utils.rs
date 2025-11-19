@@ -1,3 +1,5 @@
+use leptos::prelude::*;
+
 use std::pin::Pin;
 use std::ops::{CoroutineState, Coroutine};
 
@@ -52,5 +54,61 @@ impl<Y> Iterator for Coro<Y> {
                 None
             },
         }
+    }
+}
+
+// A "snapshot" of progress of a sorting algorithm, at the very least containing
+// the partially sorted list and possibly also annotations, tree structures, etc.
+// Not to be confused with Leptos' View/IntoView stuff.
+pub struct Vew {
+    inner: Box<dyn IsVew>,
+}
+
+impl Vew {
+    pub fn list(&self) -> &[usize] {
+        self.inner.list()
+    }
+
+    pub fn into_view(&self) -> AnyView {
+        self.inner.into_view()
+    }
+}
+
+impl From<&[usize]> for Vew {
+    fn from(f: &[usize]) -> Vew {
+        // Incredibly wasteful. Vew should just be an enum
+        Vew { inner: Box::new(VList(Box::from(f))) }
+    }
+}
+
+impl From<&Box<[usize]>> for Vew {
+    fn from(f: &Box<[usize]>) -> Vew {
+        Vew { inner: Box::new(VList(f.clone())) }
+    }
+}
+
+pub trait IsVew: Send + Sync {
+    fn list(&self) -> &[usize];
+    fn into_view(&self) -> AnyView;
+}
+
+pub struct VList(Box<[usize]>);
+
+impl IsVew for VList {
+    fn list(&self) -> &[usize] {
+        &self.0
+    }
+
+    fn into_view(&self) -> AnyView {
+        let s = self.0.clone();
+        view! {
+            <table>
+                <tr>
+                {move || s.iter().copied().map(|v| view! {
+                    <td>{v}</td>
+                }).collect_view()}
+                </tr>
+            </table>
+        }.into_any()
     }
 }
