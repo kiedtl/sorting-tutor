@@ -1,7 +1,7 @@
-mod heap;
+pub mod heap;
 
 use crate::for_coro;
-use crate::utils::{Vew, Coro};
+use crate::utils::{Vew, Coro, VHeap};
 
 use std::pin::Pin;
 use std::ops::{CoroutineState, Coroutine};
@@ -149,7 +149,7 @@ pub fn heap(mut x: List) -> impl Coroutine<(), Yield = Vew, Return = ()> {
 
         for i in (1..h.nodes()).rev() {
             h.swap(heap::Node::of(0, &h), heap::Node::of(i, &h));
-            yield Vew::from(h.repr());
+            yield VHeap::new(&h, Some((0, i))).into();
 
             h.abandon(1);
             for_coro!(y in heapify(h.root(), &mut h) => yield y);
@@ -185,7 +185,7 @@ fn heapify(
 
         if max != node {
             heap.swap(node, max);
-            yield Vew::from(heap.repr());
+            yield VHeap::new(&heap, Some((node.index, max.index))).into();
             for_coro!(y in heapify(max, heap) => yield y);
         }
     }

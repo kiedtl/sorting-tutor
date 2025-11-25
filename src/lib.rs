@@ -22,8 +22,9 @@ use wasm_bindgen_futures::spawn_local;
 use wasm_bindgen::prelude::*;
 use web_sys::console;
 
+#[macro_export]
 macro_rules! log {
-    ($($t:tt)*) => (console::log_1(&format!($($t)*).into()))
+    ($($t:tt)*) => (::web_sys::console::log_1(&format!($($t)*).into()))
 }
 
 #[component]
@@ -52,9 +53,9 @@ fn Control(
                             } else {
                                 running_w.set(true);
                                 spawn_local(async move {
-                                    while let Some(view) = sorter_w.write().next() && running_r.get() {
+                                    while let Some(view) = sorter_w.write_untracked().next() && running_r.get_untracked() {
                                         history_w.write().push(view);
-                                        TimeoutFuture::new(delay_r.get() as u32).await;
+                                        TimeoutFuture::new(delay_r.get_untracked() as u32).await;
                                     }
                                     running_w.set(false);
                                 });
@@ -115,7 +116,7 @@ fn Control(
                 </td>
                 <td>
                     <input
-                        type="range" id="size" name="Size" min="4" max="64"
+                        type="range" id="size" name="Size" min="4" max="32"
                         value=move || size_r.get()
                         on:input:target=move |ev| {
                             size_w.set(ev.target().value().parse().unwrap());
@@ -143,6 +144,15 @@ fn Control(
                     <i>{move || delay_r.get()}"ms"</i>
                 </td>
             </tr>
+            <h3>"Legend"</h3>
+            <tr>
+                <td><span style="width:auto" class="elem">"Normal"</span></td>
+                <td>" elements in the array."</td>
+            </tr>
+            <tr>
+                <td><span style="width:auto" class="elem swp">"Blue"</span></td>
+                <td>" elements were just swapped."</td>
+            </tr>
         </table>
     }
 }
@@ -152,24 +162,34 @@ fn Content(
     history_r: ReadSignal<Vec<Vew>>,
 ) -> impl IntoView
 {
+    let bar_width = move || history_r.read().last().map(|v| v.list().len()).unwrap_or(0) as f32 * 1.7;
+    let bar_width_str = move || format!("width:{}em", bar_width());
+
     view!{
-        <table>
-            <tr>
-            {move || history_r.read().last().map(|item| {
-                item.list().iter().copied().map(|v| view! {
-                    <td style="vertical-align: bottom">
-                        <div style=move || format!("background:green; height: {v}px")>
-                        </div>
-                    </td>
-                }).collect_view()
-            })}
-            </tr>
-        </table>
-        <table>
-            {move || history_r.read().iter().rev().map(|vset| {
-                vset.into_view()
-            }).collect_view()}
-        </table>
+        <div class="bar-enclosure">
+            <table class="array" style=move || bar_width_str()>
+                <tr>
+                {move || history_r.read().last().map(|item| {
+                    let swapped = item.swapped();
+                    item.list().iter().copied().enumerate().map(|(i, v)| {
+                        let class = match swapped {
+                            Some((a, b)) if i == a || i == b => "bar swp",
+                            _ => "bar",
+                        };
+                        view! {
+                            <td class="td-bar">
+                                <div class=class style=move || format!("height:{v}px")>
+                                </div>
+                            </td>
+                        }
+                    }).collect_view()
+                })}
+                </tr>
+            </table>
+        </div>
+        {move || history_r.read().iter().rev().map(|vset| {
+            vset.into_view()
+        }).collect_view()}
     }
 }
 

@@ -40,13 +40,21 @@ impl<'a> Heap<'a> {
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct Node {
-    index: usize,
+    pub index: usize,
 }
 
 impl Node {
     pub fn of(index: usize, heap: &Heap<'_>) -> Self {
         assert!(index < heap.nodes());
         Self { index }
+    }
+
+    pub fn of_unchecked(index: usize) -> Self {
+        Self { index }
+    }
+
+    pub fn level(&self) -> usize {
+        (self.index as f32 + 1.).log2().floor() as usize
     }
 
     pub fn value(&self, heap: &Heap<'_>) -> usize {
