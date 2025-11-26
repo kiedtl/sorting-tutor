@@ -1,7 +1,7 @@
 pub mod heap;
 
 use crate::for_coro;
-use crate::utils::{Vew, Coro, VHeap};
+use crate::utils::{Vew, Coro, VHeap, VQuick};
 
 use std::pin::Pin;
 use std::ops::{CoroutineState, Coroutine};
@@ -11,13 +11,12 @@ pub type SortingCoro = Pin<Box<dyn Coroutine<(), Yield = Vew, Return = ()>>>;
 
 pub const ALGORITHMS: &[Algorithm] = &[
     // First is default
-    Algorithm::Heap,
-    Algorithm::Bubble,
-
-    Algorithm::Insertion,
-
-    Algorithm::Selection,
     Algorithm::Quick,
+
+    Algorithm::Bubble,
+    Algorithm::Insertion,
+    Algorithm::Selection,
+    Algorithm::Heap,
 ];
 
 #[derive(Copy, Clone)]
@@ -30,6 +29,7 @@ pub enum Algorithm {
     //Stalin,
     //Merge,
     //Tim,
+    //Drift,
 }
 
 impl Algorithm {
@@ -195,22 +195,31 @@ pub fn quicksort(mut x: List) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] static move || {
         let l = x.len();
         for_coro!(y in _quicksort(&mut x, 0, l) =>
-            yield y
+            yield y.layer(0..l, None).into()
         );
     }
 }
 
-pub fn _quicksort<'a>(x: &'a mut [usize], s: usize, e: usize) -> impl Coroutine<(), Yield = Vew, Return = ()> {
+fn _quicksort<'a>(x: &'a mut [usize], s: usize, e: usize) -> impl Coroutine<(), Yield = VQuick, Return = ()> {
     #[coroutine] static move || {
         if x[s..e].len() <= 1 {
             return;
         }
 
-        let pivot = s + qspartition(&mut x[s..e]);
-        yield Vew::from(&*x);
+        let cloned: Box<[usize]> = Box::from(&*x);
+        let pivot = s + for_coro!(
+            PartitionView { expl, swapped, pivot } in qspartition(&mut x[s..e]) => {
+                yield VQuick::new(cloned.clone(), swapped, expl)
+                    .layer(s..e, Some(s + pivot));
+            }
+        );
 
-        for_coro!(y in _quicksort(x, s, pivot) => yield y);
-        for_coro!(y in _quicksort(x, pivot + 1, e) => yield y);
+        for_coro!(y in _quicksort(x, s, pivot) =>
+            yield y.layer(s..e, Some(pivot))
+        );
+        for_coro!(y in _quicksort(x, pivot + 1, e) =>
+            yield y.layer(s..e, Some(pivot))
+        );
     }
 }
 
@@ -238,18 +247,48 @@ pub fn _quicksort<'a>(x: &'a mut [usize], s: usize, e: usize) -> impl Coroutine<
 // }
 
 
-fn qspartition(x: &mut [usize]) -> usize {
-    let pivot = x.len() / 2;
-    x.swap(pivot, x.len() - 1);
+struct PartitionView {
+    expl: String,
+    swapped: Option<(usize, usize)>,
+    pivot: usize,
+}
 
-    let mut i = 0;
-    for j in 0..x.len() - 1 {
-        if x[j] <= x[x.len() - 1] {
-            x.swap(i, j);
-            i += 1;
+impl PartitionView {
+    pub fn new(expl: &str, s1: usize, s2: usize, p: usize) -> Self {
+        PartitionView {
+            expl: expl.to_owned(),
+            swapped: Some((s1, s2)),
+            pivot: p,
         }
     }
 
-    x.swap(i, x.len() - 1);
-    i
+    pub fn new2(expl: &str, p: usize) -> Self {
+        PartitionView {
+            expl: expl.to_owned(),
+            swapped: None,
+            pivot: p,
+        }
+    }
+}
+
+fn qspartition<'a>(x: &'a mut [usize]) -> impl Coroutine<(), Yield = PartitionView, Return = usize> {
+    #[coroutine] static move || {
+        let pivot = x.len() / 2;
+        yield PartitionView::new2("Chose a pivot", pivot);
+        x.swap(pivot, x.len() - 1);
+        yield PartitionView::new("Moved pivot to end", pivot, x.len() - 1, pivot);
+
+        let mut i = 0;
+        for j in 0..x.len() - 1 {
+            if x[j] <= x[x.len() - 1] {
+                x.swap(i, j);
+                yield PartitionView::new("Partitioning", i, j, pivot);
+                i += 1;
+            }
+        }
+
+        x.swap(i, x.len() - 1);
+        yield PartitionView::new("Moved pivot back", i, x.len() - 1, pivot);
+        i
+    }
 }

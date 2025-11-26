@@ -1,20 +1,23 @@
 use leptos::prelude::*;
 
 use std::pin::Pin;
-use std::ops::{CoroutineState, Coroutine};
+use std::ops::{Range, CoroutineState, Coroutine};
 
 use crate::sorter::heap::{Heap, Node};
 
 #[macro_export]
 macro_rules! for_coro {
-    ($value:ident in $coro:expr => $b:expr) => {
+    ($value:pat in $coro:expr => $b:expr) => {
         {
             let mut coro = Box::pin($coro);
-            while let CoroutineState::Yielded($value) = coro.as_mut().resume(()) {
-                $b
+            loop {
+                match coro.as_mut().resume(()) {
+                    CoroutineState::Yielded($value) => $b,
+                    CoroutineState::Complete(ret) => break ret,
+                }
             }
         }
-    };
+    }
 }
 
 pub struct Coro<Y> {
@@ -99,20 +102,47 @@ pub trait IsVew: Send + Sync {
     fn into_view(&self) -> AnyView;
 }
 
-fn list_into_view(s: &[usize], swapped: Option<(usize, usize)>) -> impl IntoView + use<> {
+fn list_into_view(
+    spadding: usize,
+    epadding: usize,
+    s: &[usize],
+    swapped: Option<(usize, usize)>,
+    special: Option<usize>, // Pivot for quicksort
+)
+    -> impl IntoView + use<>
+{
     let s = s.to_owned();
-    let width = s.len() as f32 * 1.7;
+    let width = (spadding + epadding + s.len()) as f32 * 1.7;
     let width_str = format!("width:{width}em");
     view! {
         <table class="array" style=width_str>
             <tr>
+            {move || (0..spadding).map(|_| {
+                view! {
+                    <td class="elem pad">""</td>
+                }
+            }).collect_view()}
             {move || s.iter().copied().enumerate().map(|(i, v)| {
-                let class = match swapped {
-                    Some((a, b)) if i == a || i == b => "elem swp",
-                    _ => "elem",
+                let swp = match swapped {
+                    Some((a, b)) if i == a || i == b => " swp",
+                    _ => "",
                 };
+
+                let special = if Some(i) == special {
+                    " spc"
+                } else {
+                    ""
+                };
+
+                let class = format!("elem{}{}", swp, special);
+
                 view! {
                     <td class=class>{v}</td>
+                }
+            }).collect_view()}
+            {move || (0..epadding).map(|_| {
+                view! {
+                    <td class="elem pad">""</td>
                 }
             }).collect_view()}
             </tr>
@@ -132,7 +162,7 @@ impl IsVew for VList {
     }
 
     fn into_view(&self) -> AnyView {
-        list_into_view(&self.0, None).into_any()
+        list_into_view(0, 0, &self.0, None, None).into_any()
     }
 }
 
@@ -167,7 +197,7 @@ impl IsVew for VHeap {
         let heap_len = self.heap.len(); // for closure
         let actual_heap_len = self.n;
 
-        let listview = list_into_view(&self.heap, swapped).into_any();
+        let listview = list_into_view(0, 0, &self.heap, swapped, None).into_any();
 
         let font_size = "0.8em";
         let bw = 20;
@@ -284,6 +314,89 @@ impl IsVew for VHeap {
 }
 
 impl Into<Vew> for VHeap {
+    fn into(self) -> Vew {
+        Vew {
+            inner: Box::new(self)
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct VQuickLayer {
+    r: Range<usize>,
+    p: Option<usize>,
+}
+
+pub struct VQuick {
+    list: Box<[usize]>,
+    layers: Vec<VQuickLayer>,
+    swapped: Option<(usize, usize)>,
+    expl: String,
+}
+
+impl VQuick {
+    pub fn new(list: Box<[usize]>, swapped: Option<(usize, usize)>, expl: String) -> Self {
+        VQuick {
+            list,
+            layers: Vec::new(),
+            swapped,
+            expl
+        }
+    }
+
+    pub fn layer(mut self, r: Range<usize>, p: Option<usize>) -> Self {
+        self.layers.push(VQuickLayer { r, p });
+        self
+    }
+}
+
+impl IsVew for VQuick {
+    fn swapped(&self) -> Option<(usize, usize)> {
+        self.swapped
+    }
+
+    fn list(&self) -> &[usize] {
+        &self.list
+    }
+
+    fn into_view(&self) -> AnyView {
+        let swapped = self.swapped; // captured by closure
+        let expl = self.expl.clone(); // captured by closure
+
+        let list = self.list.clone();
+        let layers = self.layers.clone();
+
+        view! {
+            <div style="border: 2px solid #888; border-radius: 0.3em; padding: 0.2em; justify-content: center; display: flex; flex-direction: column; margin-bottom: 1.5em">
+                <div style="justify-content: center; display: grid">
+                    {move || {
+                        let mut swapped = swapped;
+                        let mut expl = Some(expl.clone());
+                        layers.iter().map(|l| {
+                            view! {
+                                {list_into_view(
+                                    l.r.start,
+                                    list.len() - l.r.end,
+                                    &list[l.r.clone()],
+
+                                    // Show swapped elements only for first layer.
+                                    swapped.take(),
+
+                                    l.p.map(|p| p - l.r.start),
+                                )}
+                                {expl.take().map(|expl| view! {
+                                    <p class="expl">{expl}</p>
+                                })}
+                            }
+                        }).collect_view()
+                    }}
+                </div>
+            </div>
+        }.into_any()
+    }
+}
+
+impl Into<Vew> for VQuick {
     fn into(self) -> Vew {
         Vew {
             inner: Box::new(self)
