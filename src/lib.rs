@@ -9,7 +9,7 @@ mod utils;
 mod sorter;
 
 use crate::utils::{Vew, IsVew, Coro};
-use crate::sorter::{Algorithm, ALGORITHMS, List};
+use crate::sorter::{Recorder, Algorithm, ALGORITHMS, List};
 
 use std::pin::Pin;
 use std::ops::Coroutine;
@@ -36,14 +36,15 @@ fn Control(
     sorter_w: WriteSignal<Coro<Vew>, LocalStorage>,
     size_r: ReadSignal<usize>,
     size_w: WriteSignal<usize>,
+    recorder: Recorder,
 ) -> impl IntoView
 {
     let (running_r, running_w) = signal(false);
     let (delay_r, delay_w) = signal(60);
 
     view! {
+        <h3>"Control"</h3>
         <table>
-            <h3>"Control"</h3>
             <tr>
                 <td>
                     <button
@@ -78,7 +79,9 @@ fn Control(
                     </button>
                 </td>
             </tr>
-            <h3>"Settings"</h3>
+        </table>
+        <h3>"Settings"</h3>
+        <table>
             <tr>
                 <td>
                     <label>Algorithm</label>
@@ -144,14 +147,31 @@ fn Control(
                     <i>{move || delay_r.get()}"ms"</i>
                 </td>
             </tr>
-            <h3>"Legend"</h3>
+        </table>
+        <h3>"Stats"</h3>
+        <table>
             <tr>
-                <td><span style="width:auto" class="elem">"Normal"</span></td>
-                <td>" elements in the array."</td>
+                <td><label>"Comparisons"</label></td>
+                <td>{move || recorder.count_comparisons()}</td>
             </tr>
             <tr>
-                <td><span style="width:auto" class="elem swp">"Blue"</span></td>
-                <td>" elements were just swapped."</td>
+                <td><label>"Swaps"</label></td>
+                <td>{move || recorder.count_swaps()}</td>
+            </tr>
+        </table>
+        <h3>"Legend"</h3>
+        <table>
+            <tr>
+                <td class="head"><span style="width:auto" class="elem">"White"</span></td>
+                <td>"Ordinary elements."</td>
+            </tr>
+            <tr>
+                <td><label><span style="width:auto" class="elem swp">"Blue"</span></label></td>
+                <td>"Elements just swapped."</td>
+            </tr>
+            <tr>
+                <td><label><span style="width:auto" class="elem spc">"Gold"</span></label></td>
+                <td>"\"Special\" elements (pivots, minimums)."</td>
             </tr>
         </table>
     }
@@ -197,7 +217,11 @@ fn Content(
 fn App() -> impl IntoView {
     let mut rng = rand::rng();
 
-    let (size_r, size_w) = signal(8);
+    // Default size is power of two minus two -- good for heapsort, since it
+    // means an "almost-full" tree
+    let (size_r, size_w) = signal(14);
+
+    let recorder = Recorder::new();
 
     let (values_r, values_w) = signal({
         (0..size_r.get_untracked())
@@ -211,7 +235,12 @@ fn App() -> impl IntoView {
     let (algo_r, algo_w) = signal(ALGORITHMS[0]);
 
     let (history_r, history_w) = signal(vec![Vew::from(&*values_r.read_untracked())]);
-    let (_, sorter_w) = signal_local(Coro::new(algo_r.get_untracked().func()(values_r.get_untracked())));
+    let (_, sorter_w) = signal_local(Coro::new(
+            algo_r.get_untracked().func()(
+                values_r.get_untracked(),
+                recorder,
+            )
+    ));
 
     // When size/values/algorithm changes, set values
     Effect::new(move |_| {
@@ -226,7 +255,13 @@ fn App() -> impl IntoView {
 
         history_w.write().clear();
         history_w.write().push(Vew::from(&*values_r.read_untracked()));
-        sorter_w.set(Coro::new(algo_r.get().func()(values_r.get())));
+        sorter_w.set(Coro::new(
+                algo_r.get_untracked().func()(
+                    values_r.get_untracked(),
+                    recorder,
+                )
+        ));
+        recorder.reset();
     });
 
     view! {
@@ -241,6 +276,7 @@ fn App() -> impl IntoView {
                         sorter_w=sorter_w
                         size_w=size_w
                         size_r=size_r
+                        recorder=recorder
                     />
                 </td>
                 <td>

@@ -2,6 +2,8 @@ use leptos::prelude::*;
 
 use std::pin::Pin;
 use std::ops::{Range, CoroutineState, Coroutine};
+use std::sync::Arc;
+use std::sync::atomic::{Ordering, AtomicUsize};
 
 use crate::sorter::heap::{Heap, Node};
 
@@ -26,16 +28,6 @@ pub struct Coro<Y> {
 }
 
 impl<Y> Coro<Y> {
-    // pub fn of<S>(s: S) -> Self
-    // where
-    //     S: Coroutine<(), Yield = Y, Return = ()>,
-    // {
-    //     Self {
-    //         func: Box::pin(s),
-    //         done: false
-    //     }
-    // }
-
     pub fn new(s: Pin<Box<dyn Coroutine<(), Yield = Y, Return = ()>>>) -> Self {
         Self {
             func: s,
@@ -62,6 +54,76 @@ impl<Y> Iterator for Coro<Y> {
     }
 }
 
+// #[derive(Copy, Clone, Debug)]
+// pub enum O {
+//     C, // Constant-time, O(1)
+//     N,
+//     LogN,
+//     NLogN,
+//     N2,
+// }
+
+// pub struct Perf {
+//     cmp: (O, O),
+//     swp: (O, O),
+// }
+
+// impl Perf {
+//     pub fn new(worst_cmp: O, worst_swp: O, best_cmp: O, best_swp: O) -> Self {
+//         Perf {
+//             cmp: (worst_cmp, best_cmp),
+//             swp: (worst_swp, best_swp),
+//         }
+//     }
+// }
+
+#[derive(Clone, Debug, Default)]
+pub struct RecorderState {
+    // comparisons: Arc<AtomicUsize>,
+    // swaps: Arc<AtomicUsize>,
+    comparisons: usize,
+    swaps: usize,
+}
+
+impl RecorderState {
+    pub fn lt(&mut self, a: usize, b: usize) -> bool {
+        //self.comparisons.fetch_add(1, Ordering::Relaxed);
+        self.comparisons += 1;
+        a < b
+    }
+
+    pub fn gt(&mut self, a: usize, b: usize) -> bool {
+        //self.comparisons.fetch_add(1, Ordering::Relaxed);
+        self.comparisons += 1;
+        a > b
+    }
+
+    pub fn min(&mut self, a: usize, b: usize, by: impl Fn(usize) -> usize) -> usize {
+        self.comparisons += 1;
+        if by(a) <= by(b) {
+            a
+        } else {
+            b
+        }
+    }
+
+    pub fn swap(&mut self, x: &mut [usize], a: usize, b: usize) {
+        //self.swaps.fetch_add(1, Ordering::Relaxed);
+        self.swaps += 1;
+        x.swap(a, b);
+    }
+
+    pub fn count_comparisons(&self) -> usize {
+        //self.comparisons.load(Ordering::Relaxed)
+        self.comparisons
+    }
+
+    pub fn count_swaps(&self) -> usize {
+        //self.swaps.load(Ordering::Relaxed)
+        self.swaps
+    }
+}
+
 // A "snapshot" of progress of a sorting algorithm, at the very least containing
 // the partially sorted list and possibly also annotations, tree structures, etc.
 // Not to be confused with Leptos' View/IntoView stuff.
@@ -69,16 +131,16 @@ pub struct Vew {
     inner: Box<dyn IsVew>,
 }
 
-impl IsVew for Vew {
-    fn list(&self) -> &[usize] {
+impl Vew {
+    pub fn list(&self) -> &[usize] {
         self.inner.list()
     }
 
-    fn swapped(&self) -> Option<(usize, usize)> {
+    pub fn swapped(&self) -> Option<(usize, usize)> {
         self.inner.swapped()
     }
 
-    fn into_view(&self) -> AnyView {
+    pub fn into_view(&self) -> AnyView {
         self.inner.into_view()
     }
 }
@@ -86,13 +148,13 @@ impl IsVew for Vew {
 impl From<&[usize]> for Vew {
     fn from(f: &[usize]) -> Vew {
         // Incredibly wasteful. Vew should just be an enum
-        Vew { inner: Box::new(VList(Box::from(f))) }
+        Vew { inner: Box::new(VList::new(f)) }
     }
 }
 
 impl From<&Box<[usize]>> for Vew {
     fn from(f: &Box<[usize]>) -> Vew {
-        Vew { inner: Box::new(VList(f.clone())) }
+        Vew { inner: Box::new(VList::new(&f)) }
     }
 }
 
@@ -100,6 +162,17 @@ pub trait IsVew: Send + Sync {
     fn swapped(&self) -> Option<(usize, usize)>;
     fn list(&self) -> &[usize];
     fn into_view(&self) -> AnyView;
+}
+
+impl<T> From<T> for Vew
+where
+    T: IsVew + 'static,
+{
+    fn from(value: T) -> Vew {
+        Vew {
+            inner: Box::new(value)
+        }
+    }
 }
 
 fn list_into_view(
@@ -150,19 +223,50 @@ fn list_into_view(
     }
 }
 
-pub struct VList(Box<[usize]>);
+pub struct VList {
+    list: Box<[usize]>,
+    swapped: Option<(usize, usize)>,
+    special: Option<usize>,
+    expl: Option<String>,
+}
+
+impl VList {
+    pub fn new(x: &[usize]) -> Self {
+        VList {
+            list: Box::from(x),
+            swapped: None,
+            special: None,
+            expl: None,
+        }
+    }
+
+    pub fn swapped(mut self, s1: usize, s2: usize) -> Self {
+        self.swapped = Some((s1, s2));
+        self
+    }
+
+    pub fn special(mut self, spc: usize) -> Self {
+        self.special = Some(spc);
+        self
+    }
+
+    pub fn expl(mut self, expl: String) -> Self {
+        self.expl = Some(expl);
+        self
+    }
+}
 
 impl IsVew for VList {
     fn swapped(&self) -> Option<(usize, usize)> {
-        None
+        self.swapped
     }
 
     fn list(&self) -> &[usize] {
-        &self.0
+        &self.list
     }
 
     fn into_view(&self) -> AnyView {
-        list_into_view(0, 0, &self.0, None, None).into_any()
+        list_into_view(0, 0, &self.list, self.swapped, self.special).into_any()
     }
 }
 
@@ -313,14 +417,6 @@ impl IsVew for VHeap {
     }
 }
 
-impl Into<Vew> for VHeap {
-    fn into(self) -> Vew {
-        Vew {
-            inner: Box::new(self)
-        }
-    }
-}
-
 #[derive(Clone)]
 pub struct VQuickLayer {
     r: Range<usize>,
@@ -393,13 +489,5 @@ impl IsVew for VQuick {
                 </div>
             </div>
         }.into_any()
-    }
-}
-
-impl Into<Vew> for VQuick {
-    fn into(self) -> Vew {
-        Vew {
-            inner: Box::new(self)
-        }
     }
 }

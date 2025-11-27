@@ -1,21 +1,65 @@
 pub mod heap;
 
 use crate::for_coro;
-use crate::utils::{Vew, Coro, VHeap, VQuick};
+use crate::utils::{
+    //O, Perf,
+    RecorderState,
+    Coro,
+    Vew, VList, VHeap, VQuick
+};
 
+use leptos::prelude::{Write, WriteSignal, Read, ReadSignal, Set, signal};
 use std::pin::Pin;
 use std::ops::{CoroutineState, Coroutine};
 
 pub type List = Box<[usize]>;
 pub type SortingCoro = Pin<Box<dyn Coroutine<(), Yield = Vew, Return = ()>>>;
 
+#[derive(Copy, Clone)]
+pub struct Recorder(WriteSignal<RecorderState>, ReadSignal<RecorderState>);
+
+impl Recorder {
+    pub fn new() -> Self {
+        let (r, w) = signal(RecorderState::default());
+        Self(w, r)
+    }
+
+    pub fn reset(&self) {
+        self.0.set(Default::default());
+    }
+
+    pub fn lt(&self, a: usize, b: usize) -> bool {
+        self.0.write().lt(a, b)
+    }
+
+    pub fn gt(&self, a: usize, b: usize) -> bool {
+        self.0.write().gt(a, b)
+    }
+
+    pub fn min(&mut self, a: usize, b: usize, by: impl Fn(usize) -> usize) -> usize {
+        self.0.write().min(a, b, by)
+    }
+
+    pub fn swap(&self, x: &mut [usize], a: usize, b: usize) {
+        self.0.write().swap(x, a, b)
+    }
+
+    pub fn count_comparisons(&self) -> usize {
+        self.1.read().count_comparisons()
+    }
+
+    pub fn count_swaps(&self) -> usize {
+        self.1.read().count_swaps()
+    }
+}
+
 pub const ALGORITHMS: &[Algorithm] = &[
     // First is default
-    Algorithm::Quick,
-
-    Algorithm::Bubble,
     Algorithm::Insertion,
+
+    Algorithm::Quick,
     Algorithm::Selection,
+    Algorithm::Bubble,
     Algorithm::Heap,
 ];
 
@@ -33,15 +77,25 @@ pub enum Algorithm {
 }
 
 impl Algorithm {
-    pub fn func(&self) -> fn(Box<[usize]>) -> SortingCoro {
+    pub fn func(&self) -> fn(Box<[usize]>, Recorder) -> SortingCoro {
         match self {
-            Algorithm::Bubble => |v| Box::pin(bubble(v)),
-            Algorithm::Selection => |v| Box::pin(selection(v)),
-            Algorithm::Insertion => |v| Box::pin(insertion(v)),
-            Algorithm::Heap => |v| Box::pin(heap(v)),
-            Algorithm::Quick => |v| Box::pin(quicksort(v)),
+            Algorithm::Bubble => |v, r| Box::pin(bubble(v, r)),
+            Algorithm::Selection => |v, r| Box::pin(selection(v, r)),
+            Algorithm::Insertion => |v, r| Box::pin(insertion(v, r)),
+            Algorithm::Heap => |v, r| Box::pin(heap(v, r)),
+            Algorithm::Quick => |v, r| Box::pin(quicksort(v, r)),
         }
     }
+
+    // pub fn perf(&self) -> Perf {
+    //     match self {
+    //         Algorithm::Bubble => Perf::new(O::N2, O::N2, O::N, O::C),
+    //         Algorithm::Selection => Perf::new(O::N2, O::N2, O::N2, O::N2),
+    //         Algorithm::Insertion => Perf::new(O::N2, O::N2, O::N, O::C),
+    //         Algorithm::Heap => Perf::new(O::NLogN, O::NLogN, O::NLogN, O::NLogN),
+    //         Algorithm::Quick => Perf::new(O::N2, O::N2, O::NLogN, O::NLogN),
+    //     }
+    // }
 }
 
 impl std::fmt::Display for Algorithm {
@@ -84,7 +138,7 @@ impl std::fmt::Display for Algorithm {
 //     }
 // }
 
-pub fn bubble(mut x: List) -> impl Coroutine<(), Yield = Vew, Return = ()> {
+pub fn bubble(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] move || {
         let mut n = x.len();
 
@@ -92,10 +146,12 @@ pub fn bubble(mut x: List) -> impl Coroutine<(), Yield = Vew, Return = ()> {
             let mut work_done = true;
 
             for i in 1..n {
-                if x[i - 1] > x[i] {
-                    x.swap(i - 1, i);
+                if r.gt(x[i - 1], x[i]) {
+                    r.swap(&mut x, i - 1, i);
                     work_done = true;
-                    yield Vew::from(&x);
+                    yield VList::new(&x)
+                        .swapped(i - 1, i)
+                        .into();
                 }
             }
 
@@ -108,38 +164,41 @@ pub fn bubble(mut x: List) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     }
 }
 
-pub fn selection(mut x: List) -> impl Coroutine<(), Yield = Vew, Return = ()> {
+pub fn selection(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] move || {
         for i in 0..(x.len() - 1) {
-            let min = x
-                .iter()
-                .enumerate()
-                .skip(i)
-                .min_by_key(|&(_, &v)| v)
-                .unwrap()
-                .0;
-            x.swap(i, min);
-            yield Vew::from(&x);
+            let min = (i..x.len())
+                .reduce(|a, v| r.min(a, v, |v| x[v]))
+                .unwrap();
+
+
+            r.swap(&mut x, i, min);
+            yield VList::new(&x)
+                .swapped(i, min)
+                .special(min)
+                .into();
         }
     }
 }
 
-pub fn insertion(mut x: List) -> impl Coroutine<(), Yield = Vew, Return = ()> {
+pub fn insertion(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] move || {
         for i in 1..x.len() {
             for j in 0..i {
                 let j = i - j;
-                if x[j - 1] <= x[j] {
+                if !r.gt(x[j - 1], x[j]) {
                     break;
                 }
-                x.swap(j - 1, j);
-                yield Vew::from(&x);
+                r.swap(&mut x, j - 1, j);
+                yield VList::new(&x)
+                    .swapped(j - 1, j)
+                    .into();
             }
         }
     }
 }
 
-pub fn heap(mut x: List) -> impl Coroutine<(), Yield = Vew, Return = ()> {
+pub fn heap(mut x: List, _: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] static move || {
         let mut h = heap::Heap::new(&mut x);
 
@@ -191,7 +250,7 @@ fn heapify(
     }
 }
 
-pub fn quicksort(mut x: List) -> impl Coroutine<(), Yield = Vew, Return = ()> {
+pub fn quicksort(mut x: List, _: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] static move || {
         let l = x.len();
         for_coro!(y in _quicksort(&mut x, 0, l) =>

@@ -6,3 +6,9 @@ page: Sorting Algo History
 - Contributors
   - E.g. people who rediscovered paper, named it, brought it into wide use,
     improved it, etc.
+
+- "Current actions/state" snapshot. "Peek"?
+  - Like ordinary snapshots but new peeks will replace old ones. So it's like a video
+  - Vew::is_peek to set any Vew into a peek.
+  - Selection sort: show search for minimum
+  - Bubble sort: show iteration, current iteration number, etc
