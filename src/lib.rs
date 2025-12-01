@@ -27,6 +27,16 @@ macro_rules! log {
     ($($t:tt)*) => (::web_sys::console::log_1(&format!($($t)*).into()))
 }
 
+fn run_once(
+    sorter_w: WriteSignal<Coro<Vew>, LocalStorage>,
+    history_w: WriteSignal<Vec<Vew>>,
+) {
+    match sorter_w.write().next() {
+        Some(view) => history_w.write().push(view),
+        None => (),
+    }
+}
+
 #[component]
 fn Control(
     algo_r: ReadSignal<Algorithm>,
@@ -68,12 +78,7 @@ fn Control(
                 </td>
                 <td>
                     <button
-                        on:click=move |_| {
-                            match sorter_w.write().next() {
-                                Some(view) => history_w.write().push(view),
-                                None => (),
-                            }
-                        }
+                        on:click=move |_| run_once(sorter_w, history_w)
                     >
                     "Step"
                     </button>
@@ -119,7 +124,7 @@ fn Control(
                 </td>
                 <td>
                     <input
-                        type="range" id="size" name="Size" min="4" max="32"
+                        type="range" id="size" name="Size" min="4" max="64"
                         value=move || size_r.get()
                         on:input:target=move |ev| {
                             size_w.set(ev.target().value().parse().unwrap());
@@ -182,34 +187,53 @@ fn Content(
     history_r: ReadSignal<Vec<Vew>>,
 ) -> impl IntoView
 {
-    let bar_width = move || history_r.read().last().map(|v| v.list().len()).unwrap_or(0) as f32 * 1.7;
-    let bar_width_str = move || format!("width:{}em", bar_width());
+    // let bars = move || history_r.read().last().map(|v| v.list().len()).unwrap_or(0);
+    // let bar_width_fac = move || if bars() > 32 { 1. } else { 1.7 };
+    // let bar_width = move || bars() as f32 * bar_width_fac();
 
     view!{
-        <div class="bar-enclosure">
-            <table class="array" style=move || bar_width_str()>
-                <tr>
-                {move || history_r.read().last().map(|item| {
-                    let swapped = item.swapped();
-                    item.list().iter().copied().enumerate().map(|(i, v)| {
-                        let class = match swapped {
-                            Some((a, b)) if i == a || i == b => "bar swp",
-                            _ => "bar",
-                        };
-                        view! {
-                            <td class="td-bar">
-                                <div class=class style=move || format!("height:{v}px")>
-                                </div>
-                            </td>
-                        }
-                    }).collect_view()
-                })}
-                </tr>
-            </table>
+        <div class="solo-group">
+            <div class="bar-enclosure">
+                <table class="array"> // style=move || bar_width_str()>
+                    <tr>
+                    {move || history_r.read().last().map(|item| {
+                        let swapped = item.swapped();
+                        let l = item.list().len();
+                        item.list().iter().copied().enumerate().map(|(i, v)| {
+                            let td_class = format!("td-bar {}", utils::size_class(l));
+                            let class = match swapped {
+                                Some((a, b)) if i == a || i == b => "bar swp",
+                                _ => "bar",
+                            };
+                            view! {
+                                <td class=td_class>
+                                    <div class=class style=move || format!("height:{v}px")>
+                                    </div>
+                                </td>
+                            }
+                        }).collect_view()
+                    })}
+                    </tr>
+                </table>
+            </div>
         </div>
-        {move || history_r.read().iter().rev().map(|vset| {
-            vset.into_view()
-        }).collect_view()}
+        {move || {
+            let mut found_important = false;
+            history_r
+                .read()
+                .iter()
+                .rev()
+                .filter_map(|item|
+                    (item.is_important() || !found_important)
+                        .then_some(item)
+                )
+                .enumerate()
+                .take_while(|(i, _)| *i < 32)
+                .map(|(_, vset)| {
+                    vset.into_view()
+                })
+                .collect_view()
+        }}
     }
 }
 
@@ -254,14 +278,14 @@ fn App() -> impl IntoView {
         }
 
         history_w.write().clear();
-        history_w.write().push(Vew::from(&*values_r.read_untracked()));
+        recorder.reset();
         sorter_w.set(Coro::new(
-                algo_r.get_untracked().func()(
+                algo_r.get().func()(
                     values_r.get_untracked(),
                     recorder,
                 )
         ));
-        recorder.reset();
+        run_once(sorter_w, history_w);
     });
 
     view! {

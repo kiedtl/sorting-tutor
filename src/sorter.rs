@@ -140,6 +140,7 @@ impl std::fmt::Display for Algorithm {
 
 pub fn bubble(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] move || {
+        yield VList::new(&x).into();
         let mut n = x.len();
 
         loop {
@@ -166,6 +167,8 @@ pub fn bubble(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew, R
 
 pub fn selection(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] move || {
+        yield VList::new(&x).into();
+
         for i in 0..(x.len() - 1) {
             let min = (i..x.len())
                 .reduce(|a, v| r.min(a, v, |v| x[v]))
@@ -183,6 +186,8 @@ pub fn selection(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew
 
 pub fn insertion(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] move || {
+        yield VList::new(&x).into();
+
         for i in 1..x.len() {
             for j in 0..i {
                 let j = i - j;
@@ -201,6 +206,7 @@ pub fn insertion(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew
 pub fn heap(mut x: List, _: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] static move || {
         let mut h = heap::Heap::new(&mut x);
+        yield VHeap::new(&h, None).into();
 
         for_coro!(view in build_heap(&mut h) =>
             yield view
@@ -253,6 +259,7 @@ fn heapify(
 pub fn quicksort(mut x: List, _: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] static move || {
         let l = x.len();
+        yield VQuick::new(x.clone(), None, "").layer(0..x.len(), None).into();
         for_coro!(y in _quicksort(&mut x, 0, l) =>
             yield y.layer(0..l, None).into()
         );

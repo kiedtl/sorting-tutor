@@ -124,11 +124,22 @@ impl RecorderState {
     }
 }
 
+pub fn size_class(item_len: usize) -> &'static str {
+    match item_len {
+        00..16 => " z1",
+        16..24 => " z2",
+        24..40 => " z3",
+        40..56 => " z4",
+        _ => " z5",
+    }
+}
+
 // A "snapshot" of progress of a sorting algorithm, at the very least containing
 // the partially sorted list and possibly also annotations, tree structures, etc.
 // Not to be confused with Leptos' View/IntoView stuff.
 pub struct Vew {
     inner: Box<dyn IsVew>,
+    is_important: bool,
 }
 
 impl Vew {
@@ -143,18 +154,34 @@ impl Vew {
     pub fn into_view(&self) -> AnyView {
         self.inner.into_view()
     }
+
+    pub fn is_important(&self) -> bool {
+        self.is_important
+    }
+
+    pub fn fleeting(mut self) -> Self {
+        self.is_important = false;
+        self
+    }
 }
 
 impl From<&[usize]> for Vew {
     fn from(f: &[usize]) -> Vew {
-        // Incredibly wasteful. Vew should just be an enum
-        Vew { inner: Box::new(VList::new(f)) }
+        // A Box inside a Box made from a borrowed Box. Incredibly wasteful.
+        // Vew should just be an enum.
+        Vew {
+            inner: Box::new(VList::new(f)),
+            is_important: true,
+        }
     }
 }
 
 impl From<&Box<[usize]>> for Vew {
     fn from(f: &Box<[usize]>) -> Vew {
-        Vew { inner: Box::new(VList::new(&f)) }
+        Vew {
+            inner: Box::new(VList::new(&f)),
+            is_important: true,
+        }
     }
 }
 
@@ -170,7 +197,8 @@ where
 {
     fn from(value: T) -> Vew {
         Vew {
-            inner: Box::new(value)
+            inner: Box::new(value),
+            is_important: false,
         }
     }
 }
@@ -185,14 +213,21 @@ fn list_into_view(
     -> impl IntoView + use<>
 {
     let s = s.to_owned();
-    let width = (spadding + epadding + s.len()) as f32 * 1.7;
-    let width_str = format!("width:{width}em");
+    let elem_width_class = size_class(s.len());
+    let pad_class = format!("elem pad {elem_width_class}"); 
+    let pad_class_cloned = format!("elem pad {elem_width_class}"); 
+
+    // let width_fac = if s.len() > 32 { 1.0 } else { 1.7 };
+    // let width = (spadding + epadding + s.len()) as f32 * width_fac;
+    // let width_str = format!("width:{width}em");
+
     view! {
-        <table class="array" style=width_str>
+        <table class="array"> // style=width_str>
             <tr>
             {move || (0..spadding).map(|_| {
+                let c = pad_class.clone();
                 view! {
-                    <td class="elem pad">""</td>
+                    <td class=c></td>
                 }
             }).collect_view()}
             {move || s.iter().copied().enumerate().map(|(i, v)| {
@@ -207,15 +242,16 @@ fn list_into_view(
                     ""
                 };
 
-                let class = format!("elem{}{}", swp, special);
+                let class = format!("elem{swp}{special}{elem_width_class}");
 
                 view! {
                     <td class=class>{v}</td>
                 }
             }).collect_view()}
             {move || (0..epadding).map(|_| {
+                let c = pad_class_cloned.clone();
                 view! {
-                    <td class="elem pad">""</td>
+                    <td class=c></td>
                 }
             }).collect_view()}
             </tr>
@@ -266,7 +302,13 @@ impl IsVew for VList {
     }
 
     fn into_view(&self) -> AnyView {
-        list_into_view(0, 0, &self.list, self.swapped, self.special).into_any()
+        view! {
+            <div class="solo-group">
+                <div class="enclosure">
+                    {list_into_view(0, 0, &self.list, self.swapped, self.special)}
+                </div>
+            </div>
+        }.into_any()
     }
 }
 
@@ -330,11 +372,11 @@ impl IsVew for VHeap {
         };
 
         view! {
-            <div style="border: 2px solid #888; border-radius: 0.3em; padding: 0.2em; justify-content: center; display: flex; flex-direction: column; margin-bottom: 1.5em">
-                <div style="justify-content: center; display: grid">
+            <div class="group">
+                <div class="enclosure">
                     {listview}
                 </div>
-                <div style="justify-content: center; display: grid">
+                <div class="enclosure">
                     <svg xmlns="http://www.w3.org/2000/svg" width=width height=height>
                         <defs>
                           <linearGradient id="member" gradientTransform="rotate(90)">
@@ -431,12 +473,12 @@ pub struct VQuick {
 }
 
 impl VQuick {
-    pub fn new(list: Box<[usize]>, swapped: Option<(usize, usize)>, expl: String) -> Self {
+    pub fn new(list: Box<[usize]>, swapped: Option<(usize, usize)>, expl: impl Into<String>) -> Self {
         VQuick {
             list,
             layers: Vec::new(),
             swapped,
-            expl
+            expl: expl.into(),
         }
     }
 
@@ -463,13 +505,13 @@ impl IsVew for VQuick {
         let layers = self.layers.clone();
 
         view! {
-            <div style="border: 2px solid #888; border-radius: 0.3em; padding: 0.2em; justify-content: center; display: flex; flex-direction: column; margin-bottom: 1.5em">
-                <div style="justify-content: center; display: grid">
-                    {move || {
-                        let mut swapped = swapped;
-                        let mut expl = Some(expl.clone());
-                        layers.iter().map(|l| {
-                            view! {
+            <div class="group">
+                {move || {
+                    let mut swapped = swapped;
+                    let mut expl = (!expl.is_empty()).then(|| expl.clone());
+                    layers.iter().map(|l| {
+                        view! {
+                            <div class="enclosure">
                                 {list_into_view(
                                     l.r.start,
                                     list.len() - l.r.end,
@@ -480,13 +522,15 @@ impl IsVew for VQuick {
 
                                     l.p.map(|p| p - l.r.start),
                                 )}
+                            </div>
+                            <div class="enclosure">
                                 {expl.take().map(|expl| view! {
                                     <p class="expl">{expl}</p>
                                 })}
-                            }
-                        }).collect_view()
-                    }}
-                </div>
+                            </div>
+                        }
+                    }).collect_view()
+                }}
             </div>
         }.into_any()
     }
