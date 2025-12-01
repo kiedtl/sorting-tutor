@@ -256,17 +256,20 @@ fn heapify(
     }
 }
 
-pub fn quicksort(mut x: List, _: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
+pub fn quicksort(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] static move || {
         let l = x.len();
         yield VQuick::new(x.clone(), None, "").layer(0..x.len(), None).into();
-        for_coro!(y in _quicksort(&mut x, 0, l) =>
+        for_coro!(y in _quicksort(&mut x, 0, l, r) =>
             yield y.layer(0..l, None).into()
         );
     }
 }
 
-fn _quicksort<'a>(x: &'a mut [usize], s: usize, e: usize) -> impl Coroutine<(), Yield = VQuick, Return = ()> {
+fn _quicksort<'a>(
+    x: &'a mut [usize], s: usize, e: usize, mut r: Recorder
+) -> impl Coroutine<(), Yield = VQuick, Return = ()>
+{
     #[coroutine] static move || {
         if x[s..e].len() <= 1 {
             return;
@@ -274,16 +277,16 @@ fn _quicksort<'a>(x: &'a mut [usize], s: usize, e: usize) -> impl Coroutine<(), 
 
         let cloned: Box<[usize]> = Box::from(&*x);
         let pivot = s + for_coro!(
-            PartitionView { expl, swapped, pivot } in qspartition(&mut x[s..e]) => {
+            PartitionView { expl, swapped, pivot } in qspartition(&mut x[s..e], r) => {
                 yield VQuick::new(cloned.clone(), swapped, expl)
                     .layer(s..e, Some(s + pivot));
             }
         );
 
-        for_coro!(y in _quicksort(x, s, pivot) =>
+        for_coro!(y in _quicksort(x, s, pivot, r) =>
             yield y.layer(s..e, Some(pivot))
         );
-        for_coro!(y in _quicksort(x, pivot + 1, e) =>
+        for_coro!(y in _quicksort(x, pivot + 1, e, r) =>
             yield y.layer(s..e, Some(pivot))
         );
     }
@@ -337,23 +340,23 @@ impl PartitionView {
     }
 }
 
-fn qspartition<'a>(x: &'a mut [usize]) -> impl Coroutine<(), Yield = PartitionView, Return = usize> {
+fn qspartition<'a>(x: &'a mut [usize], mut r: Recorder) -> impl Coroutine<(), Yield = PartitionView, Return = usize> {
     #[coroutine] static move || {
         let pivot = x.len() / 2;
         yield PartitionView::new2("Chose a pivot", pivot);
-        x.swap(pivot, x.len() - 1);
+        r.swap(x, pivot, x.len() - 1);
         yield PartitionView::new("Moved pivot to end", pivot, x.len() - 1, pivot);
 
         let mut i = 0;
         for j in 0..x.len() - 1 {
-            if x[j] <= x[x.len() - 1] {
-                x.swap(i, j);
+            if r.lt(x[j], x[x.len() - 1]) {
+                r.swap(x, i, j);
                 yield PartitionView::new("Partitioning", i, j, pivot);
                 i += 1;
             }
         }
 
-        x.swap(i, x.len() - 1);
+        r.swap(x, i, x.len() - 1);
         yield PartitionView::new("Moved pivot back", i, x.len() - 1, pivot);
         i
     }

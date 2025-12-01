@@ -213,7 +213,7 @@ fn list_into_view(
     -> impl IntoView + use<>
 {
     let s = s.to_owned();
-    let elem_width_class = size_class(s.len());
+    let elem_width_class = size_class(s.len() + spadding + epadding);
     let pad_class = format!("elem pad {elem_width_class}"); 
     let pad_class_cloned = format!("elem pad {elem_width_class}"); 
 
