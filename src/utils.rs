@@ -1,7 +1,9 @@
 use leptos::prelude::*;
 
-use std::pin::Pin;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::ops::{Range, CoroutineState, Coroutine};
+use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::{Ordering, AtomicUsize};
 
@@ -140,9 +142,22 @@ pub fn size_class(item_len: usize) -> &'static str {
 pub struct Vew {
     inner: Box<dyn IsVew>,
     is_important: bool,
+    hash: u64,
 }
 
 impl Vew {
+    pub fn new(inner: Box<dyn IsVew>) -> Self {
+        let mut hasher = DefaultHasher::new();
+        inner.list().hash(&mut hasher);
+        let hash = hasher.finish();
+
+        Vew {
+            inner,
+            is_important: true,
+            hash,
+        }
+    }
+
     pub fn list(&self) -> &[usize] {
         self.inner.list()
     }
@@ -159,6 +174,10 @@ impl Vew {
         self.is_important
     }
 
+    pub fn hash(&self) -> u64 {
+        self.hash
+    }
+
     pub fn fleeting(mut self) -> Self {
         self.is_important = false;
         self
@@ -169,19 +188,13 @@ impl From<&[usize]> for Vew {
     fn from(f: &[usize]) -> Vew {
         // A Box inside a Box made from a borrowed Box. Incredibly wasteful.
         // Vew should just be an enum.
-        Vew {
-            inner: Box::new(VList::new(f)),
-            is_important: true,
-        }
+        Vew::new(Box::new(VList::new(f)))
     }
 }
 
 impl From<&Box<[usize]>> for Vew {
     fn from(f: &Box<[usize]>) -> Vew {
-        Vew {
-            inner: Box::new(VList::new(&f)),
-            is_important: true,
-        }
+        Vew::new(Box::new(VList::new(&f)))
     }
 }
 
@@ -196,10 +209,7 @@ where
     T: IsVew + 'static,
 {
     fn from(value: T) -> Vew {
-        Vew {
-            inner: Box::new(value),
-            is_important: false,
-        }
+        Vew::new(Box::new(value))
     }
 }
 

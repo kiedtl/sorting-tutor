@@ -124,7 +124,7 @@ fn Control(
                 </td>
                 <td>
                     <input
-                        type="range" id="size" name="Size" min="4" max="64"
+                        type="range" id="size" name="Size" min="4" max="96"
                         value=move || size_r.get()
                         on:input:target=move |ev| {
                             size_w.set(ev.target().value().parse().unwrap());
@@ -191,49 +191,62 @@ fn Content(
     // let bar_width_fac = move || if bars() > 32 { 1. } else { 1.7 };
     // let bar_width = move || bars() as f32 * bar_width_fac();
 
-    view!{
+    let bars = move || history_r.read().last().unwrap().list().iter().copied().enumerate().collect::<Vec<_>>();
+    let bars_len = move || history_r.read().last().unwrap().list().len();
+    let were_bars_swapped = move |i| match history_r.read().last().unwrap().swapped() {
+        Some((a, b)) if i == a || i == b => true,
+        _ => false,
+    };
+
+    view! {
         <div class="solo-group">
             <div class="bar-enclosure">
-                <table class="array"> // style=move || bar_width_str()>
-                    <tr>
-                    {move || history_r.read().last().map(|item| {
-                        let swapped = item.swapped();
-                        let l = item.list().len();
-                        item.list().iter().copied().enumerate().map(|(i, v)| {
-                            let td_class = format!("td-bar {}", utils::size_class(l));
-                            let class = match swapped {
-                                Some((a, b)) if i == a || i == b => "bar swp",
-                                _ => "bar",
-                            };
-                            view! {
-                                <td class=td_class>
-                                    <div class=class style=move || format!("height:{v}px")>
-                                    </div>
-                                </td>
-                            }
-                        }).collect_view()
-                    })}
-                    </tr>
-                </table>
+                <For
+                    each=move || bars()
+                    key=|&(i, v)| (i, v)
+                    let((i, v))
+                >
+                    <div
+                        class=move || format!(
+                            "{} {}",
+                            utils::size_class(bars_len()),
+                            if were_bars_swapped(i) { "bar swp" } else { "bar" }
+                        )
+                        style=move || format!("height:{v}px")
+                    >
+                    </div>
+                </For>
             </div>
         </div>
-        {move || {
-            let mut found_important = false;
-            history_r
-                .read()
-                .iter()
-                .rev()
-                .filter_map(|item|
-                    (item.is_important() || !found_important)
-                        .then_some(item)
-                )
-                .enumerate()
-                .take_while(|(i, _)| *i < 32)
-                .map(|(_, vset)| {
-                    vset.into_view()
-                })
-                .collect_view()
-        }}
+        <For
+            each=move || {
+                let mut found_important = false;
+                history_r
+                    .read()
+                    .iter()
+                    .enumerate()
+                    .rev()
+                    .filter_map(|(k, item)| {
+                        let important = item.is_important();
+                        if important || !found_important {
+                            if !found_important {
+                                found_important = important;
+                            }
+                            Some((k, item))
+                        } else {
+                            None
+                        }
+                    })
+                    .enumerate()
+                    .take_while(|(i, (k, _))| *i < 32)
+                    .map(|(i, (k, v))| (k, v.hash()))
+                    .collect::<Vec<_>>()
+            }
+            key=|&(k, h)| (k, h)
+            let((k, _))
+        >
+        {move || history_r.read()[k].into_view()}
+        </For>
     }
 }
 
