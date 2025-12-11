@@ -326,6 +326,7 @@ pub struct VHeap {
     heap: Box<[usize]>,
     n: usize,
     swapped: Option<(usize, usize)>,
+    heapifying: Option<usize>,
 }
 
 impl VHeap {
@@ -334,7 +335,13 @@ impl VHeap {
             heap: Box::from(heap.repr()),
             n: heap.nodes(),
             swapped,
+            heapifying: None,
         }
+    }
+
+    pub fn now_heapifying(mut self, i: usize) -> Self {
+        self.heapifying = Some(i);
+        self
     }
 }
 
@@ -349,6 +356,7 @@ impl IsVew for VHeap {
 
     fn into_view(&self) -> AnyView {
         let swapped = self.swapped; // captured by closure
+        let heapifying = self.heapifying; // for closure
         let heap_repr = self.heap.clone(); // for closure
         let heap_len = self.heap.len(); // for closure
         let actual_heap_len = self.n;
@@ -428,6 +436,21 @@ impl IsVew for VHeap {
                             })
                             .collect_view()
                         }
+
+                        {move || heapifying.map(|heapifying| {
+                            let (x, y) = get_pos_for(heapifying);
+                            view! {
+                                <circle
+                                    cx={x + bw / 2}
+                                    cy={y + bw / 2}
+                                    r={bw * 80 / 100}
+                                    stroke="#af4f4f"
+                                    stroke-width=2
+                                    fill="#00000000"
+                                />
+                            }
+                        })}
+
                         {move || heap_repr
                             .iter()
                             .enumerate()

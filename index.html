@@ -49,243 +49,459 @@
 }
 
 html {
-    font-family: Atkinson Hyperlegible Next, sans-serif;
-    font-size: 11.5pt;
+  font-family: sans-serif;
+  font-size: 10pt;
+}
+
+* {
+  --acc-2: #2f5f3f;
+  --acc-4: #4f7f5f;
+  --acc-9: #9fcfaf;
+  --acc-b: #bfefcf;
+  
+  --hih-6: #6f6521;
+  --hih-f: #fff5b1;
 }
 
 body {
-    text-align: left;
-    display: flex;
-    flex-direction: row;
-    background: #f7f5f2;
-    margin: 25px auto;
-    max-width: 980px;
+  text-align: left;
+  display: flex;
+  flex-direction: row;
+  background: #edebe5;
+  margin: 25px auto;
 }
 
 main {
-    display: block;
-    margin-left: 50px;
+  margin: 0 25vw 0 25vw;
+  display: flex;
+  gap: 2em;
+}
+
+#left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8em;
 }
 
 nav {
-    max-width: 160px;
-    min-width: 160px;
+  max-width: 160px;
+  min-width: 160px;
 }
 
 h1 {
-    font-size: 23pt;
-    color: #4f9f5f;
+  font-size: 23pt;
+  color: #4f9f5f;
 }
 
 h2 {
-    font-size: 20pt;
+  font-size: 20pt;
 }
 
 h3 {
-    font-size: 15pt;
-    font-variant: small-caps;
-    font-weight: 800;
-    color: #1f6f2f;
+  font-size: 15pt;
+  font-variant: small-caps;
+  font-weight: 800;
+  color: #1f6f2f;
 }
 
 h4 {
-    font-size: 12.5pt;
+  font-size: 12.5pt;
 }
 
 hr {
-    width: 90%;
+  width: 90%;
 }
 
 table.array {
-    table-layout: fixed;
-    border-collapse: separate;
-    border-spacing: 2px;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 2px;
 }
 
 .elem {
-    font-size: 0.85rem;
-    font-family: monospace;
-    width: 1rem;
-    height: 1rem;
-    border: 2px solid #888;
+  font-size: 0.85rem;
+  font-family: monospace;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid #888;
 }
 
 .elem.pad {
-    border: 2px dashed #99a;
+  border: 2px dashed #99a;
 }
 
 /* Fix for empty padding cells being shrunken */
 td.elem.pad::before {
-    content: "";
-    display: inline-block;
+  content: "";
+  display: inline-block;
 }
 
 .elem.swp {
-    color: #fff;
-    background: #2f4f8f;
-    border: 2px solid #001;
+  color: #fff;
+  background: #2f4f8f;
+  border: 2px solid #001;
 }
 
 .elem.spc {
-    border: 2px solid #000;
-    background: #ffd060;
+  border: 2px solid #000;
+  background: #ffd060;
 }
 
 .elem.spc.swp {
-    border: 2px solid #001;
-    color: #fff;
-    background: #2f4f8f;
-    background: linear-gradient(
-        135deg,
-        #cfa030 30%,
-        #2f4f8f 70%
-    );
+  border: 2px solid #001;
+  color: #fff;
+  background: linear-gradient(135deg, #cfa030 30%, #2f4f8f 70%);
 }
 
 .z1 {
-    width: 0.9rem;
-    height: 0.9rem;
-    font-size: 0.7rem;
+  width: 0.9rem;
+  height: 0.9rem;
+  font-size: 0.7rem;
 }
 
 .z2 {
-    width: 0.8rem;
-    height: 0.8rem;
-    font-size: 0.6rem;
+  width: 0.8rem;
+  height: 0.8rem;
+  font-size: 0.6rem;
 }
 
 .z3 {
-    width: 0.7rem;
-    height: 0.7rem;
-    font-size: 0.5rem;
+  width: 0.7rem;
+  height: 0.7rem;
+  font-size: 0.5rem;
 }
 
 .z4 {
-    width: 0.6rem;
-    height: 0.6rem;
-    font-size: 0.4rem;
+  width: 0.6rem;
+  height: 0.6rem;
+  font-size: 0.4rem;
 }
 
 .z5 {
-    width: 0.5rem;
-    height: 0.5rem;
-    font-size: 0.3rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  font-size: 0.3rem;
 }
 
 td.td-bar {
-    width: 1rem;
-    vertical-align: bottom;
+  width: 1rem;
+  vertical-align: bottom;
 }
 
 .bar {
-    background: #3f6f4f;
-    margin: 0 auto 0 auto;
-    padding: 0 1px 0 1px;
-    align-self: baseline;
+  background: #3f6f4f;
+  margin: 0 auto 0 auto;
+  padding: 0 1px 0 1px;
+  align-self: baseline;
 }
 
 .bar.swp {
-    background: #2f4f8f;
+  background: #2f4f8f;
 }
 
 .bar-enclosure {
-    display: flex;
-    flex-direction: row;
-    margin: 0 0.2rem 0 0.2rem;
+  display: flex;
+  flex-direction: row;
+  margin: 0 0.2rem 0 0.2rem;
 }
 
 .solo-group {
-    border: 2px solid #0000;
+  border: 2px solid #0000;
 }
 
 .group {
-    border: 2px solid #888;
-    border-radius: 0.3rem;
-    justify-content: center;
-    margin-bottom: 1.5rem;
-    display: flex;
-    flex-direction: column;
+  border: 2px solid #888;
+  border-radius: 0.3rem;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
 }
 
 .enclosure {
-    margin: 0 0.2rem 0 0.2rem;
-    display: grid;
-    justify-content: center;
+  margin: 0 0.2rem 0 0.2rem;
+  display: grid;
+  justify-content: center;
 }
 
 p.expl {
-    text-align: center;
-    color: #333;
-    font-style: normal; 
-    font-family: "Indie Flower", serif;
-    font-weight: 400;
-    font-size: 1.1rem;
-    margin-top: -0.07rem;
+  text-align: center;
+  color: #333;
+  font-style: normal;
+  font-family: "Indie Flower", serif;
+  font-weight: 400;
+  font-size: 1.1rem;
+  margin-top: -0.07rem;
 }
 
 label {
-    color: #343;
-    font-weight: 600;
-    font-size: 1.05rem;
-    margin-right: 0.6rem;
+  color: #343;
+  font-weight: 600;
+  font-family: serif;
+  margin-right: 0.6rem;
 }
 
 a {
-    color: #911;
-    text-decoration: none;
+  color: #911;
+  text-decoration: none;
 }
 
 a:hover {
-    text-decoration: underline;
+  text-decoration: underline;
 }
 
 a:active {
-    color: #800;
+  color: #800;
 }
 
 a.btn {
-    display: block;
-    border: 1px solid black;
-    padding: 0.08rem 0.7rem;
-    text-align: center;
-    color: #fff;
-    background: #b22;
-    text-decoration: none;
+  display: block;
+  border: 1px solid black;
+  padding: 0.08rem 0.7rem;
+  text-align: center;
+  color: #fff;
+  background: #b22;
+  text-decoration: none;
 }
 
 a.btn:hover {
-    background: #800;
+  background: #800;
 }
 
 a.btn:active {
-    background: #000;
+  background: #000;
 }
 
 a.btn:after {
-    content: " →";
+  content: " →";
 }
 
 a.nav {
-    display: block;
-    border: 1px solid black;
-    padding: 0.08em 0.7em;
-    color: #000;
-    background: #fff;
-    text-decoration: none;
-    margin-bottom: 0.35em;
-    width: 80%;
-    box-shadow: 3px 3px #8e8b89;
+  display: block;
+  border: 1px solid black;
+  padding: 0.08em 0.7em;
+  color: #000;
+  background: #fff;
+  text-decoration: none;
+  margin-bottom: 0.35em;
+  width: 80%;
+  box-shadow: 3px 3px #8e8b89;
 }
 
 a.nav:hover {
-    color: #fff;
-    background: #222;
+  color: #fff;
+  background: #222;
 }
 
-a.nav.sel, a.nav:active {
-    color: #fff;
-    background: #000;
+a.nav.sel,
+a.nav:active {
+  color: #fff;
+  background: #000;
 }
+
+button {
+  border: 2px solid var(--acc-2);
+  background: #9fcfaf;
+  box-shadow: 3px 3px var(--acc-2);
+}
+
+button:hover {
+  background: #bfefcf;
+}
+
+button:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0px 0px var(--acc-2);
+}
+
+select {
+  border: 2px solid var(--acc-2);
+  background: #9fcfaf;
+  box-shadow: 3px 3px var(--acc-2);
+}
+
+select:hover {
+  background: var(--acc-b);
+}
+
+select:open {
+  transform: translate(3px, 3px);
+  box-shadow: 0px 0px var(--acc-2);
+}
+
+/*
+ * Input range stuff from:
+ * https://css-tricks.com/sliding-nightmare-understanding-range-input/
+ */
+[type="range"] {
+  margin: 0;
+  padding: 0;
+  width: 12.5em;
+  height: 1.5em;
+  background: transparent;
+  font: 1em/1 sans-serif;
+}
+
+[type="range"],
+[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+}
+
+[type="range"]::-webkit-slider-runnable-track {
+  box-sizing: border-box;
+  border: 1px solid var(--acc-2);
+  box-shadow: inset 1px 1px var(--acc-2);
+  height: 0.7em;
+  background: #ccc;
+}
+
+input[type="range"]::-moz-range-progress {
+  background-color: var(--acc-9);
+  border: 1px solid var(--acc-2);
+  box-shadow: inset 1px 1px var(--acc-2);
+
+  /* Without this, the progress part of the track is slightly
+   * shorter and appears in this weird way on top of the regular
+   * track. Your reminder of what a horrendous experience styling
+   * form elements is in 2025.
+   *
+   * (Even with this, the heights don't line up exactly, so the
+   * progress part of the track looks slightly taller than the
+   * other part.
+   */
+  height: 0.6em;
+}
+
+[type="range"]::-moz-range-track {
+  box-sizing: border-box;
+  border: 1px solid var(--acc-2);
+  box-shadow: inset 1px 1px var(--acc-2);
+  height: 0.7em;
+  background: #ccc;
+}
+
+[type="range"]::-webkit-slider-thumb {
+  margin-top: -0.625em;
+  box-sizing: border-box;
+  height: 1rem;
+  width: 0.8rem;
+  background: var(--acc-b);
+  border: 1px solid var(--acc-2);
+  box-shadow: inset 1px 1px var(--acc-2);
+  border-radius: 3px;
+}
+
+[type="range"]::-moz-range-thumb {
+  box-sizing: border-box;
+  height: 1rem;
+  width: 0.8rem;
+  background: var(--acc-4);
+  border: 1px solid var(--acc-2);
+  box-shadow: inset 1px 1px var(--acc-2);
+  border-radius: 3px;
+}
+
+select,
+button {
+  font-size: 0.9rem;
+  
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 30ms;
+}
+
+/*
+select,
+button,
+[type=range]::-webkit-slider-thumb,
+[type=range]::-moz-range-thumb 
+{
+  border-radius: 2px;
+}
+*/
+
+.card {
+  background: #f5f5f2;
+  border-width: 1px;
+  border-color: #222 #555 #555 #222;
+  border-style: dotted solid solid dotted;
+  box-shadow: 3px 3px #888;
+  padding: 0.5em;
+}
+
+.card > h3 {
+  margin-top: 0;
+}
+
+hr.fsep {
+  border: 1px dotted #555;
+  margin: -0.6em -0.5em -0.6em -0.5em;
+  width: auto;
+}
+
+hr.bhr {
+  background: radial-gradient(#020 0.5px, #0000 1px) 0 0/3px 3px, transparent;
+  border: 0;
+  opacity: 0.6;
+  height: 0.5rem;
+  max-height: 0.5rem;
+  margin: -0.8em 0 1em 0;
+  width: 100%;
+}
+
+span.fake {
+  display: inline-block;
+  width: 3rem;
+  padding: 0 2px 0 2px;
+  margin-right: 0.6rem;
+  text-align: center;
+}
+
+table.flat-card {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table.flat-card td,
+table.flat-card th {
+  border: 1px solid #bbb;
+  padding: 0.2rem;
+}
+
+table.flat-card th {
+  border-top: 1px dotted #000;
+  border-bottom: 1px solid #000;
+  font-size: 1.1rem;
+}
+
+table.flat-card td:first-child,
+table.flat-card th:first-child {
+  border-left: 3px solid var(--acc-4);
+  padding-left: 0.5rem;
+}
+
+table.flat-card td:first-child {
+  width: 4em;
+}
+
+table.flat-card td:last-child {
+  width: 10%;
+  white-space: nowrap;
+}
+
+.hih {
+  background: var(--hih-f);
+}
+
+table.flat-card.hih td:first-child,
+table.flat-card.hih th:first-child {
+  border-left-color: var(--hih-6);
+}
+
+.m {
+  font-family: monospace;
+}
+
 </style>
     </head>
 </html>

@@ -251,7 +251,9 @@ fn heapify(
 
         if max != node {
             heap.swap(node, max);
-            yield VHeap::new(&heap, Some((node.index, max.index))).into();
+            yield VHeap::new(&heap, Some((node.index, max.index)))
+                .now_heapifying(max.index)
+                .into();
             for_coro!(y in heapify(max, heap) => yield y);
         }
     }

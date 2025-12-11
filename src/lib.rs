@@ -53,132 +53,148 @@ fn Control(
     let (delay_r, delay_w) = signal(60);
 
     view! {
-        <h3>"Control"</h3>
-        <table>
-            <tr>
-                <td>
-                    <button
-                        on:click=move |_| {
-                            if running_r.get() {
-                                running_w.set(false);
-                            } else {
-                                running_w.set(true);
-                                spawn_local(async move {
-                                    while let Some(view) = sorter_w.write_untracked().next() && running_r.get_untracked() {
-                                        history_w.write().push(view);
-                                        TimeoutFuture::new(delay_r.get_untracked() as u32).await;
-                                    }
-                                    running_w.set(false);
-                                });
+        <div class="card">
+            <h3>"Control"</h3>
+            <hr class="bhr" />
+            <button
+                on:click=move |_| {
+                    if running_r.get() {
+                        running_w.set(false);
+                    } else {
+                        running_w.set(true);
+                        spawn_local(async move {
+                            while let Some(view) = sorter_w.write_untracked().next() && running_r.get_untracked() {
+                                history_w.write().push(view);
+                                TimeoutFuture::new(delay_r.get_untracked() as u32).await;
                             }
-                        }
-                    >
-                        {move || if running_r.get() { "Stop" } else { "Start" }}
-                    </button>
-                </td>
-                <td>
-                    <button
-                        on:click=move |_| run_once(sorter_w, history_w)
-                    >
-                    "Step"
-                    </button>
-                </td>
-            </tr>
-        </table>
-        <h3>"Settings"</h3>
-        <table>
-            <tr>
-                <td>
-                    <label>Algorithm</label>
-                </td>
-                <td>
-                    <select
-                        on:change:target=move |ev| {
-                            let v = ev.target().value();
-                            algo_w.set(
-                                ALGORITHMS
-                                    .iter()
-                                    .copied()
-                                    .find(|al| al.to_string() == v)
-                                    .unwrap_or(Algorithm::Insertion)
-                            );
-                        }
-                        prop:value=move || algo_r.get().to_string()
-                    >
-                        {move || sorter::ALGORITHMS.iter()
-                            .enumerate()
-                            .map(|(i, algorithm)| {
-                                let s = algorithm.to_string();
-                                view! {
-                                    <option value={s}>{s.clone()}</option>
-                                }
-                            })
-                            .collect_view()
-                        }
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <label for="Size">Size</label>
-                </td>
-                <td>
-                    <input
-                        type="range" id="size" name="Size" min="4" max="96"
-                        value=move || size_r.get()
-                        on:input:target=move |ev| {
-                            size_w.set(ev.target().value().parse().unwrap());
-                        }
-                    />
-                </td>
-                <td>
-                    <i>{move || size_r.get()}</i>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <label for="Delay">Delay</label>
-                </td>
-                <td>
-                    <input
-                        type="range" id="delay" name="Delay" min="0" max="256"
-                        value=move || delay_r.get()
-                        on:input:target=move |ev| {
-                            delay_w.set(ev.target().value().parse().unwrap());
-                        }
-                    />
-                </td>
-                <td>
-                    <i>{move || delay_r.get()}"ms"</i>
-                </td>
-            </tr>
-        </table>
-        <h3>"Stats"</h3>
-        <table>
-            <tr>
-                <td><label>"Comparisons"</label></td>
-                <td>{move || recorder.count_comparisons()}</td>
-            </tr>
-            <tr>
-                <td><label>"Swaps"</label></td>
-                <td>{move || recorder.count_swaps()}</td>
-            </tr>
-        </table>
-        <h3>"Legend"</h3>
-        <table>
-            <tr>
-                <td class="head"><span style="width:auto" class="elem">"White"</span></td>
-                <td>"Ordinary elements."</td>
-            </tr>
-            <tr>
-                <td><label><span style="width:auto" class="elem swp">"Blue"</span></label></td>
-                <td>"Elements just swapped."</td>
-            </tr>
-            <tr>
-                <td><label><span style="width:auto" class="elem spc">"Gold"</span></label></td>
-                <td>"\"Special\" elements (pivots, minimums)."</td>
-            </tr>
-        </table>
+                            running_w.set(false);
+                        });
+                    }
+                }
+            >
+                {move || if running_r.get() { "Stop" } else { "Start" }}
+            </button>
+            <button
+                on:click=move |_| run_once(sorter_w, history_w)
+            >
+            "Step"
+            </button>
+        </div>
+        <div class="card">
+            <h3>"Settings"</h3>
+            <hr class="bhr" />
+            <table class="flat-card">
+                <th colspan="3">"Data"</th>
+                <tr>
+                    <td>
+                        <label for="Size">Size</label>
+                    </td>
+                    <td>
+                        <input
+                            type="range" id="size" name="Size" min="4" max="96"
+                            value=move || size_r.get()
+                            on:input:target=move |ev| {
+                                size_w.set(ev.target().value().parse().unwrap());
+                            }
+                        />
+                    </td>
+                    <td>
+                        <i class="m">{move || size_r.get()}</i>
+                    </td>
+                </tr>
+            </table>
+            <br />
+            <hr class="fsep" />
+            <br />
+            <table class="flat-card">
+                <th colspan="3">"Algorithm"</th>
+                <tr>
+                    <td>
+                        <label>"Sorter"</label>
+                    </td>
+                    <td colspan="2">
+                        <select
+                            on:change:target=move |ev| {
+                                let v = ev.target().value();
+                                algo_w.set(
+                                    ALGORITHMS
+                                        .iter()
+                                        .copied()
+                                        .find(|al| al.to_string() == v)
+                                        .unwrap_or(Algorithm::Insertion)
+                                );
+                            }
+                            prop:value=move || algo_r.get().to_string()
+                        >
+                            {move || sorter::ALGORITHMS.iter()
+                                .enumerate()
+                                .map(|(i, algorithm)| {
+                                    let s = algorithm.to_string();
+                                    view! {
+                                        <option value={s}>{s.clone()}</option>
+                                    }
+                                })
+                                .collect_view()
+                            }
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="Delay">Delay</label>
+                    </td>
+                    <td>
+                        <input
+                            type="range" id="delay" name="Delay" min="0" max="256"
+                            value=move || delay_r.get()
+                            on:input:target=move |ev| {
+                                delay_w.set(ev.target().value().parse().unwrap());
+                            }
+                        />
+                    </td>
+                    <td>
+                        <i class="m">{move || delay_r.get()}"ms"</i>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="card">
+            <h3>"Stats"</h3>
+            <hr class="bhr" />
+            <table class="flat-card">
+                <tr>
+                    <td><label>"Comparisons"</label></td>
+                    <td class="m">{move || recorder.count_comparisons()}</td>
+                </tr>
+                <tr>
+                    <td><label>"Swaps"</label></td>
+                    <td class="m">{move || recorder.count_swaps()}</td>
+                </tr>
+            </table>
+        </div>
+        <div class="card">
+            <h3>"Legend"</h3>
+            <hr class="bhr" />
+            <p>
+                <span class="fake elem">"White"</span>
+                "Ordinary elements"
+            </p>
+            <hr class="fsep" />
+            <p>
+                <span class="fake elem swp">"Blue"</span>
+                "Recently swapped"
+            </p>
+            <hr class="fsep" />
+            <p>
+                <span class="fake elem spc">"Gold"</span>
+                "Pivots, mins, special items"
+            </p>
+            <hr class="fsep" />
+            <p>
+                <span class="fake elem swp spc">"Glue"</span>
+                "Recently swapped special items"
+            </p>
+        </div>
     }
 }
 
@@ -302,27 +318,23 @@ fn App() -> impl IntoView {
     });
 
     view! {
-        <table>
-            <tr>
-                <td style="vertical-align: top">
-                    <Control
-                        algo_r=algo_r
-                        algo_w=algo_w
-                        history_r=history_r
-                        history_w=history_w
-                        sorter_w=sorter_w
-                        size_w=size_w
-                        size_r=size_r
-                        recorder=recorder
-                    />
-                </td>
-                <td>
-                    <Content
-                        history_r=history_r
-                    />
-                </td>
-            </tr>
-        </table>
+        <div id="left">
+            <Control
+                algo_r=algo_r
+                algo_w=algo_w
+                history_r=history_r
+                history_w=history_w
+                sorter_w=sorter_w
+                size_w=size_w
+                size_r=size_r
+                recorder=recorder
+            />
+        </div>
+        <div id="content">
+            <Content
+                history_r=history_r
+            />
+        </div>
     }
 }
 
