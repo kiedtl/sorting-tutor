@@ -117,61 +117,7 @@ fn Control(
         <div class="card">
             <h3>"Settings"</h3>
             <hr class="bhr" />
-            <table class="flat-card">
-                <th colspan="3">"Data"</th>
-                <tr>
-                    <td>
-                        <label for="Size">Size</label>
-                    </td>
-                    <td>
-                        <input
-                            type="range" id="size" name="Size" min="4" max="96"
-                            value=move || size_r.get()
-                            on:input:target=move |ev| {
-                                size_w.set(ev.target().value().parse().unwrap());
-                            }
-                        />
-                    </td>
-                    <td>
-                        <i class="m">{move || size_r.get()}</i>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <label>"Visual"</label>
-                    </td>
-                    <td colspan="2">
-                        <select
-                            on:change:target=move |ev| {
-                                let v = ev.target().value();
-                                visual_w.set(
-                                    VISUAL_MODES
-                                        .iter()
-                                        .copied()
-                                        .find(|vm| vm.to_string() == v)
-                                        .unwrap_or(VisualMode::default())
-                                );
-                            }
-                            prop:value=move || visual_r.get().to_string()
-                        >
-                            {move || VISUAL_MODES.iter()
-                                .enumerate()
-                                .map(|(i, vm)| {
-                                    let s = vm.to_string();
-                                    view! {
-                                        <option value={s}>{s.clone()}</option>
-                                    }
-                                })
-                                .collect_view()
-                            }
-                        </select>
-                    </td>
-                </tr>
-            </table>
-            <br />
-            <hr class="fsep" />
-            <br />
-            <table class="flat-card">
+            <table class="flat">
                 <th colspan="3">"Algorithm"</th>
                 <tr>
                     <td>
@@ -222,18 +168,58 @@ fn Control(
                     </td>
                 </tr>
             </table>
-        </div>
-        <div class="card">
-            <h3>"Stats"</h3>
-            <hr class="bhr" />
-            <table class="flat-card">
+            <br />
+            <hr class="fsep" />
+            <br />
+            <table class="flat">
+                <th colspan="3">"Data"</th>
                 <tr>
-                    <td><label>"Comparisons"</label></td>
-                    <td class="m">{move || recorder.count_comparisons()}</td>
+                    <td>
+                        <label for="Size">Size</label>
+                    </td>
+                    <td>
+                        <input
+                            type="range" id="size" name="Size" min="4" max="96"
+                            value=move || size_r.get()
+                            on:input:target=move |ev| {
+                                size_w.set(ev.target().value().parse().unwrap());
+                            }
+                        />
+                    </td>
+                    <td>
+                        <i class="m">{move || size_r.get()}</i>
+                    </td>
                 </tr>
                 <tr>
-                    <td><label>"Swaps"</label></td>
-                    <td class="m">{move || recorder.count_swaps()}</td>
+                    <td>
+                        <label>"Visual"</label>
+                    </td>
+                    <td colspan="2">
+                        <select
+                            on:change:target=move |ev| {
+                                let v = ev.target().value();
+                                visual_w.set(
+                                    VISUAL_MODES
+                                        .iter()
+                                        .copied()
+                                        .find(|vm| vm.to_string() == v)
+                                        .unwrap_or(VisualMode::default())
+                                );
+                            }
+                            prop:value=move || visual_r.get().to_string()
+                        >
+                            {move || VISUAL_MODES.iter()
+                                .enumerate()
+                                .map(|(i, vm)| {
+                                    let s = vm.to_string();
+                                    view! {
+                                        <option value={s}>{s.clone()}</option>
+                                    }
+                                })
+                                .collect_view()
+                            }
+                        </select>
+                    </td>
                 </tr>
             </table>
         </div>
@@ -335,6 +321,98 @@ fn Content(
 }
 
 #[component]
+fn Right(
+    recorder: Recorder,
+) -> impl IntoView
+{
+    view! {
+        <div class="card">
+            <h3>"Stats"</h3>
+            <hr class="bhr" />
+            <table class="flat">
+                <thead>
+                    <tr>
+                        <th colspan="2">
+                        "Performance"
+                        </th>
+                    </tr>
+                </thead>
+                <tr>
+                    <td>
+                        <label>"Comparisons"</label>
+                        <button class="tip" popovertarget="comparisons-expl">?</button>
+                        <div popover id="comparisons-expl">
+                            <h4>"Comparisons"</h4>
+                            <hr class="bhr" />
+                            "Element-to-element comparisons. Does not include comparisons made when iterating, etc."
+                        </div>
+                    </td>
+                    <td class="m">{move || recorder.count_comparisons()}</td>
+                </tr>
+                <tr>
+                    <td>
+                        <label>"Swaps"</label>
+                        <button class="tip" popovertarget="swaps-expl">?</button>
+                        <div popover id="swaps-expl">
+                            <h4>"Element Swaps"</h4>
+                            <hr class="bhr" />
+                            "Number of times a pair of elements were swapped whilst sorting."
+                        </div>
+                    </td>
+                    <td class="m">{move || recorder.count_swaps()}</td>
+                </tr>
+                <tr>
+                    <td>
+                        <label>"Function Calls"</label>
+                        <button class="tip" popovertarget="calls-expl">?</button>
+                        <div popover id="calls-expl">
+                            <h4>"Function Calls"</h4>
+                            <hr class="bhr" />
+                            <p>
+                            "Number of times any function pertaining to the sorting algorithm was called. This includes the initial function call, recursive function calls, calls to significant (non-helper) functions, etc."
+                            </p>
+                            <p>
+                            <strong>"Example"</strong>": For HeapSort, this would include the call to heapsort(), heapsort()'s call to build_heap(), build_heap()'s call and every subsequent recursive call to siftDown(), and so on. It would not include calls to len(), swap(), or other small functions."
+                            </p>
+                        </div>
+                    </td>
+                    <td class="m">{move || recorder.count_calls()}</td>
+                </tr>
+            </table>
+        </div>
+        <div class="card">
+            <h3>"Stack"</h3>
+            <hr class="bhr" />
+            <table class="stack">
+                {move || recorder.1.read().get_call_stack()
+                    .iter()
+                    .enumerate()
+                    .rev()
+                    .map(|(i, &s)| view! {
+                        <tr>
+                            <td class="frame-number m">{i.to_string()}</td>
+                            <td class="frame">
+                                <code>{s}</code>
+                            </td>
+                        </tr>
+                    })
+                    .collect_view()
+                }
+                {move || (0..(10usize.saturating_sub(recorder.1.read().get_call_stack().len())))
+                    .map(|_| view! {
+                        <tr>
+                            <td class="frame-number empty-frame"></td>
+                            <td class="frame empty-frame"></td>
+                        </tr>
+                    })
+                    .collect_view()
+                }
+            </table>
+        </div>
+    }
+}
+
+#[component]
 fn App() -> impl IntoView {
     let mut rng = rand::rng();
 
@@ -406,6 +484,11 @@ fn App() -> impl IntoView {
             <Content
                 visual_r=visual_r
                 history_r=history_r
+            />
+        </div>
+        <div id="right">
+            <Right
+                recorder=recorder
             />
         </div>
     }

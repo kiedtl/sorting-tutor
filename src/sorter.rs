@@ -16,8 +16,19 @@ use std::ops::{CoroutineState, Coroutine};
 pub type List = Box<[usize]>;
 pub type SortingCoro = Pin<Box<dyn Coroutine<(), Yield = Vew, Return = ()>>>;
 
+pub struct RecorderCallGuard<'a> {
+    name: &'static str,
+    recorder: &'a Recorder,
+}
+
+impl Drop for RecorderCallGuard<'_> {
+    fn drop(&mut self) {
+        self.recorder.0.write().f_pop();
+    }
+}
+
 #[derive(Copy, Clone)]
-pub struct Recorder(WriteSignal<RecorderState>, ReadSignal<RecorderState>);
+pub struct Recorder(WriteSignal<RecorderState>, pub ReadSignal<RecorderState>);
 
 impl Recorder {
     pub fn new() -> Self {
@@ -29,6 +40,11 @@ impl Recorder {
         self.0.set(Default::default());
     }
 
+    pub fn f(&self, n: &'static str) -> RecorderCallGuard<'_> {
+        self.0.write().f_push(n);
+        RecorderCallGuard { name: n, recorder: self }
+    }
+
     pub fn lt(&self, a: usize, b: usize) -> bool {
         self.0.write().lt(a, b)
     }
@@ -37,11 +53,11 @@ impl Recorder {
         self.0.write().gt(a, b)
     }
 
-    pub fn min(&mut self, a: usize, b: usize, by: impl Fn(usize) -> usize) -> usize {
+    pub fn min(&self, a: usize, b: usize, by: impl Fn(usize) -> usize) -> usize {
         self.0.write().min(a, b, by)
     }
 
-    pub fn max<T: Copy>(&mut self, a: T, b: T, by: impl Fn(T) -> usize) -> T {
+    pub fn max<T: Copy>(&self, a: T, b: T, by: impl Fn(T) -> usize) -> T {
         self.0.write().max(a, b, by)
     }
 
@@ -55,6 +71,10 @@ impl Recorder {
 
     pub fn count_swaps(&self) -> usize {
         self.1.read().count_swaps()
+    }
+
+    pub fn count_calls(&self) -> usize {
+        self.1.read().count_calls()
     }
 }
 
@@ -144,7 +164,8 @@ impl std::fmt::Display for Algorithm {
 // }
 
 pub fn bubble(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
-    #[coroutine] move || {
+    #[coroutine] static move || {
+        let _g = r.f("bubble");
         yield VList::new(&x).into();
         let mut n = x.len();
 
@@ -171,7 +192,8 @@ pub fn bubble(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew, R
 }
 
 pub fn selection(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
-    #[coroutine] move || {
+    #[coroutine] static move || {
+        let _g = r.f("selection");
         yield VList::new(&x).into();
 
         for i in 0..(x.len() - 1) {
@@ -190,7 +212,8 @@ pub fn selection(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew
 }
 
 pub fn insertion(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
-    #[coroutine] move || {
+    #[coroutine] static move || {
+        let _g = r.f("insertion");
         yield VList::new(&x).into();
 
         for i in 1..x.len() {
@@ -210,6 +233,7 @@ pub fn insertion(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew
 
 pub fn heap(mut x: List, r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] static move || {
+        let _g = r.f("heapsort");
         let mut h = heap::Heap::new(&mut x);
         yield VHeap::new(&h, None).into();
 
@@ -229,6 +253,7 @@ pub fn heap(mut x: List, r: Recorder) -> impl Coroutine<(), Yield = Vew, Return 
 
 fn build_heap(heap: &mut heap::Heap<'_>, r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] static move || {
+        let _g = r.f("build_heap");
         let k = heap.nodes() / 2;
         for i in (0..k).rev() {
             let n = heap::Node::of(i, heap);
@@ -245,6 +270,7 @@ fn heapify(
 ) -> impl Coroutine<(), Yield = Vew, Return = ()>
 {
     #[coroutine] static move || {
+        let _g = r.f("heapify");
         let value = node.value(heap);
         let children = node.children(heap);
 
@@ -264,7 +290,7 @@ fn heapify(
     }
 }
 
-pub fn quicksort(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
+pub fn quicksort(mut x: List, r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] static move || {
         let l = x.len();
         yield VQuick::new(x.clone(), None, "").layer(0..x.len(), None).into();
@@ -279,6 +305,7 @@ fn _quicksort<'a>(
 ) -> impl Coroutine<(), Yield = VQuick, Return = ()>
 {
     #[coroutine] static move || {
+        let _g = r.f("quicksort");
         if x[s..e].len() <= 1 {
             return;
         }
@@ -353,6 +380,7 @@ impl PartitionView {
 
 fn qspartition<'a>(x: &'a mut [usize], mut r: Recorder) -> impl Coroutine<(), Yield = PartitionView, Return = usize> {
     #[coroutine] static move || {
+        let _g = r.f("partition");
         let pivot = x.len() / 2;
         yield PartitionView::new2("Chose a pivot", pivot);
         r.swap(x, pivot, x.len() - 1);

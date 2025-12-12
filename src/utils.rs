@@ -85,9 +85,20 @@ pub struct RecorderState {
     // swaps: Arc<AtomicUsize>,
     comparisons: usize,
     swaps: usize,
+    stack: Vec<&'static str>,
+    calls: usize,
 }
 
 impl RecorderState {
+    pub fn f_push(&mut self, name: &'static str) {
+        self.calls += 1;
+        self.stack.push(name);
+    }
+
+    pub fn f_pop(&mut self) -> Option<&'static str> {
+        self.stack.pop()
+    }
+
     pub fn lt(&mut self, a: usize, b: usize) -> bool {
         //self.comparisons.fetch_add(1, Ordering::Relaxed);
         self.comparisons += 1;
@@ -132,6 +143,14 @@ impl RecorderState {
     pub fn count_swaps(&self) -> usize {
         //self.swaps.load(Ordering::Relaxed)
         self.swaps
+    }
+
+    pub fn count_calls(&self) -> usize {
+        self.calls
+    }
+
+    pub fn get_call_stack(&self) -> &[&'static str] {
+        &self.stack
     }
 }
 
