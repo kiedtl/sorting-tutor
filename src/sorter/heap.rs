@@ -1,3 +1,5 @@
+use crate::sorter::Recorder;
+
 // A non-growable array-backed binary heap. Assumed to have at least one element.
 pub struct Heap<'a> {
     repr: &'a mut [usize],
@@ -11,8 +13,8 @@ impl<'a> Heap<'a> {
         _self
     }
 
-    pub fn swap(&mut self, a: Node, b: Node) {
-        self.repr.swap(a.index, b.index);
+    pub fn swap(&mut self, a: Node, b: Node, mut r: Recorder) {
+        r.swap(self.repr, a.index, b.index);
     }
 
     // Abandon n trailing nodes.

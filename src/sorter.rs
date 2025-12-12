@@ -41,6 +41,10 @@ impl Recorder {
         self.0.write().min(a, b, by)
     }
 
+    pub fn max<T: Copy>(&mut self, a: T, b: T, by: impl Fn(T) -> usize) -> T {
+        self.0.write().max(a, b, by)
+    }
+
     pub fn swap(&self, x: &mut [usize], a: usize, b: usize) {
         self.0.write().swap(x, a, b)
     }
@@ -204,31 +208,31 @@ pub fn insertion(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew
     }
 }
 
-pub fn heap(mut x: List, _: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
+pub fn heap(mut x: List, r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] static move || {
         let mut h = heap::Heap::new(&mut x);
         yield VHeap::new(&h, None).into();
 
-        for_coro!(view in build_heap(&mut h) =>
+        for_coro!(view in build_heap(&mut h, r) =>
             yield view
         );
 
         for i in (1..h.nodes()).rev() {
-            h.swap(heap::Node::of(0, &h), heap::Node::of(i, &h));
+            h.swap(heap::Node::of(0, &h), heap::Node::of(i, &h), r);
             yield VHeap::new(&h, Some((0, i))).into();
 
             h.abandon(1);
-            for_coro!(y in heapify(h.root(), &mut h) => yield y);
+            for_coro!(y in heapify(h.root(), &mut h, r) => yield y);
         }
     }
 }
 
-fn build_heap(heap: &mut heap::Heap<'_>) -> impl Coroutine<(), Yield = Vew, Return = ()> {
+fn build_heap(heap: &mut heap::Heap<'_>, r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
     #[coroutine] static move || {
         let k = heap.nodes() / 2;
         for i in (0..k).rev() {
             let n = heap::Node::of(i, heap);
-            for_coro!(y in heapify(n, heap) => yield y);
+            for_coro!(y in heapify(n, heap, r) => yield y);
         }
     }
 }
@@ -236,7 +240,8 @@ fn build_heap(heap: &mut heap::Heap<'_>) -> impl Coroutine<(), Yield = Vew, Retu
 // Based on Introduction to Algorithms, 6.2
 fn heapify(
     node: heap::Node,
-    heap: &mut heap::Heap<'_>
+    heap: &mut heap::Heap<'_>,
+    mut r: Recorder,
 ) -> impl Coroutine<(), Yield = Vew, Return = ()>
 {
     #[coroutine] static move || {
@@ -246,15 +251,15 @@ fn heapify(
         let max = [Some(node), children[0], children[1]]
             .into_iter()
             .filter_map(|n| n)
-            .max_by_key(|n| n.value(heap))
+            .reduce(|a, n| r.max(a, n, |n| n.value(heap)))
             .unwrap();
 
         if max != node {
-            heap.swap(node, max);
+            heap.swap(node, max, r);
             yield VHeap::new(&heap, Some((node.index, max.index)))
                 .now_heapifying(max.index)
                 .into();
-            for_coro!(y in heapify(max, heap) => yield y);
+            for_coro!(y in heapify(max, heap, r) => yield y);
         }
     }
 }
@@ -278,9 +283,12 @@ fn _quicksort<'a>(
             return;
         }
 
-        let cloned: Box<[usize]> = Box::from(&*x);
+        let mut cloned: Box<[usize]> = Box::from(&*x);
         let pivot = s + for_coro!(
             PartitionView { expl, swapped, pivot } in qspartition(&mut x[s..e], r) => {
+                if let Some((s1, s2)) = swapped {
+                    cloned.swap(s + s1, s + s2);
+                }
                 yield VQuick::new(cloned.clone(), swapped, expl)
                     .layer(s..e, Some(s + pivot));
             }

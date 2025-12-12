@@ -100,6 +100,15 @@ impl RecorderState {
         a > b
     }
 
+    pub fn max<T: Copy>(&mut self, a: T, b: T, by: impl Fn(T) -> usize) -> T {
+        self.comparisons += 1;
+        if by(a) >= by(b) {
+            a
+        } else {
+            b
+        }
+    }
+
     pub fn min(&mut self, a: usize, b: usize, by: impl Fn(usize) -> usize) -> usize {
         self.comparisons += 1;
         if by(a) <= by(b) {

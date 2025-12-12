@@ -37,8 +37,42 @@ fn run_once(
     }
 }
 
+const VISUAL_MODES: &[VisualMode] = &[
+    // Default option must be first
+    VisualMode::BarsAndAllContent,
+
+    VisualMode::Bars,
+
+    // VisualMode::BarsAndCurrentState,
+    // VisualMode::BarsAndAllState,
+    // VisualMode::BarsAndCurrentContent,
+];
+
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
+enum VisualMode {
+    Bars,
+
+    // BarsAndCurrentState,
+    // BarsAndAllState,
+    // BarsAndCurrentContent,
+
+    #[default]
+    BarsAndAllContent,
+}
+
+impl std::fmt::Display for VisualMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            VisualMode::Bars => "bars only",
+            VisualMode::BarsAndAllContent => "full",
+        })
+    }
+}
+
 #[component]
 fn Control(
+    visual_r: ReadSignal<VisualMode>,
+    visual_w: WriteSignal<VisualMode>,
     algo_r: ReadSignal<Algorithm>,
     algo_w: WriteSignal<Algorithm>,
     history_r: ReadSignal<Vec<Vew>>,
@@ -100,6 +134,37 @@ fn Control(
                     </td>
                     <td>
                         <i class="m">{move || size_r.get()}</i>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label>"Visual"</label>
+                    </td>
+                    <td colspan="2">
+                        <select
+                            on:change:target=move |ev| {
+                                let v = ev.target().value();
+                                visual_w.set(
+                                    VISUAL_MODES
+                                        .iter()
+                                        .copied()
+                                        .find(|vm| vm.to_string() == v)
+                                        .unwrap_or(VisualMode::default())
+                                );
+                            }
+                            prop:value=move || visual_r.get().to_string()
+                        >
+                            {move || VISUAL_MODES.iter()
+                                .enumerate()
+                                .map(|(i, vm)| {
+                                    let s = vm.to_string();
+                                    view! {
+                                        <option value={s}>{s.clone()}</option>
+                                    }
+                                })
+                                .collect_view()
+                            }
+                        </select>
                     </td>
                 </tr>
             </table>
@@ -200,6 +265,7 @@ fn Control(
 
 #[component]
 fn Content(
+    visual_r: ReadSignal<VisualMode>,
     history_r: ReadSignal<Vec<Vew>>,
 ) -> impl IntoView
 {
@@ -234,41 +300,45 @@ fn Content(
                 </For>
             </div>
         </div>
-        <For
-            each=move || {
-                let mut found_important = false;
-                history_r
-                    .read()
-                    .iter()
-                    .enumerate()
-                    .rev()
-                    .filter_map(|(k, item)| {
-                        let important = item.is_important();
-                        if important || !found_important {
-                            if !found_important {
-                                found_important = important;
+        <Show when=move || visual_r.get() == VisualMode::BarsAndAllContent>
+            <For
+                each=move || {
+                    let mut found_important = false;
+                    history_r
+                        .read()
+                        .iter()
+                        .enumerate()
+                        .rev()
+                        .filter_map(|(k, item)| {
+                            let important = item.is_important();
+                            if important || !found_important {
+                                if !found_important {
+                                    found_important = important;
+                                }
+                                Some((k, item))
+                            } else {
+                                None
                             }
-                            Some((k, item))
-                        } else {
-                            None
-                        }
-                    })
-                    .enumerate()
-                    .take_while(|(i, (k, _))| *i < 32)
-                    .map(|(i, (k, v))| (k, v.hash()))
-                    .collect::<Vec<_>>()
-            }
-            key=|&(k, h)| (k, h)
-            let((k, _))
-        >
-        {move || history_r.read()[k].into_view()}
-        </For>
+                        })
+                        .enumerate()
+                        .take_while(|(i, (k, _))| *i < 32)
+                        .map(|(i, (k, v))| (k, v.hash()))
+                        .collect::<Vec<_>>()
+                }
+                key=|&(k, h)| (k, h)
+                let((k, _))
+            >
+            {move || history_r.read()[k].into_view()}
+            </For>
+        </Show>
     }
 }
 
 #[component]
 fn App() -> impl IntoView {
     let mut rng = rand::rng();
+
+    let (visual_r, visual_w) = signal(VisualMode::default());
 
     // Default size is power of two minus two -- good for heapsort, since it
     // means an "almost-full" tree
@@ -320,6 +390,8 @@ fn App() -> impl IntoView {
     view! {
         <div id="left">
             <Control
+                visual_r=visual_r
+                visual_w=visual_w
                 algo_r=algo_r
                 algo_w=algo_w
                 history_r=history_r
@@ -332,6 +404,7 @@ fn App() -> impl IntoView {
         </div>
         <div id="content">
             <Content
+                visual_r=visual_r
                 history_r=history_r
             />
         </div>
