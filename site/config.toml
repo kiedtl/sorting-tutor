@@ -1,0 +1,15 @@
+base_url = "https://tilde.team/~kiedtl/sorter"
+compile_sass = false
+build_search_index = false
+
+[markdown]
+highlight_code = false
+
+[extra]
+favicon = ""
+
+navbar = [
+    { title = "home",    path = "/" },
+    { title = "history", path = "/history/" },
+    { title = "about",   path = "/about/" },
+]

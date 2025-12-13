@@ -88,7 +88,7 @@ fn Control(
 
     view! {
         <div class="card">
-            <h3>"Control"</h3>
+            <h3 class="card-title">"Control"</h3>
             <hr class="bhr" />
             <button
                 on:click=move |_| {
@@ -115,7 +115,7 @@ fn Control(
             </button>
         </div>
         <div class="card">
-            <h3>"Settings"</h3>
+            <h3 class="card-title">"Settings"</h3>
             <hr class="bhr" />
             <table class="flat">
                 <th colspan="3">"Algorithm"</th>
@@ -224,7 +224,7 @@ fn Control(
             </table>
         </div>
         <div class="card">
-            <h3>"Legend"</h3>
+            <h3 class="card-title">"Legend"</h3>
             <hr class="bhr" />
             <p>
                 <span class="fake elem">"White"</span>
@@ -327,7 +327,7 @@ fn Right(
 {
     view! {
         <div class="card">
-            <h3>"Stats"</h3>
+            <h3 class="card-title">"Stats"</h3>
             <hr class="bhr" />
             <table class="flat">
                 <thead>
@@ -342,7 +342,7 @@ fn Right(
                         <label>"Comparisons"</label>
                         <button class="tip" popovertarget="comparisons-expl">?</button>
                         <div popover id="comparisons-expl">
-                            <h4>"Comparisons"</h4>
+                            <h1>"Comparisons"</h1>
                             <hr class="bhr" />
                             "Element-to-element comparisons. Does not include comparisons made when iterating, etc."
                         </div>
@@ -354,7 +354,7 @@ fn Right(
                         <label>"Swaps"</label>
                         <button class="tip" popovertarget="swaps-expl">?</button>
                         <div popover id="swaps-expl">
-                            <h4>"Element Swaps"</h4>
+                            <h1>"Element Swaps"</h1>
                             <hr class="bhr" />
                             "Number of times a pair of elements were swapped whilst sorting."
                         </div>
@@ -366,7 +366,7 @@ fn Right(
                         <label>"Function Calls"</label>
                         <button class="tip" popovertarget="calls-expl">?</button>
                         <div popover id="calls-expl">
-                            <h4>"Function Calls"</h4>
+                            <h1>"Function Calls"</h1>
                             <hr class="bhr" />
                             <p>
                             "Number of times any function pertaining to the sorting algorithm was called. This includes the initial function call, recursive function calls, calls to significant (non-helper) functions, etc."
@@ -381,7 +381,7 @@ fn Right(
             </table>
         </div>
         <div class="card">
-            <h3>"Stack"</h3>
+            <h3 class="card-title">"Stack"</h3>
             <hr class="bhr" />
             <table class="stack">
                 {move || recorder.1.read().get_call_stack()
@@ -466,40 +466,46 @@ fn App() -> impl IntoView {
     });
 
     view! {
-        <div id="left">
-            <Control
-                visual_r=visual_r
-                visual_w=visual_w
-                algo_r=algo_r
-                algo_w=algo_w
-                history_r=history_r
-                history_w=history_w
-                sorter_w=sorter_w
-                size_w=size_w
-                size_r=size_r
-                recorder=recorder
-            />
-        </div>
-        <div id="content">
-            <Content
-                visual_r=visual_r
-                history_r=history_r
-            />
-        </div>
-        <div id="right">
-            <Right
-                recorder=recorder
-            />
-        </div>
+        <main id="wasm">
+            <div id="left">
+                <Control
+                    visual_r=visual_r
+                    visual_w=visual_w
+                    algo_r=algo_r
+                    algo_w=algo_w
+                    history_r=history_r
+                    history_w=history_w
+                    sorter_w=sorter_w
+                    size_w=size_w
+                    size_r=size_r
+                    recorder=recorder
+                />
+            </div>
+            <div id="content">
+                <Content
+                    visual_r=visual_r
+                    history_r=history_r
+                />
+            </div>
+            <div id="right">
+                <Right
+                    recorder=recorder
+                />
+            </div>
+        </main>
     }
 }
 
 #[wasm_bindgen(start)]
 pub fn start() {
     console_error_panic_hook::set_once();
-    mount_to_body(|| view! {
-        <main>
-            <App/>
-        </main>
-    });
+
+    let handle = mount_to(
+        document()
+            .get_element_by_id("mountpoint")
+            .unwrap()
+            .unchecked_into(),
+        App,
+    );
+    handle.forget();
 }

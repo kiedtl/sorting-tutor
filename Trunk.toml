@@ -1,0 +1,11 @@
+[build]
+target = "index.html"
+html_output = "__raw_trunk_output.html"
+release = false
+dist = "site/static/wasm"
+public_url = "/"
+filehash = false
+inject_scripts = true
+offline = false
+minify = "on_release"
+no_sri = false

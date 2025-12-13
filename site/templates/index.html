@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en-us">
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=utf-8">
+		<link href="{% block fav %}{{ config.extra.favicon | safe }}{% endblock fav %}", rel=icon type=image/png>
+		<title>{% block ptitle %}{{ section.title | safe }}{% endblock ptitle %}</title>
+		<!-- <base href="/~kiedtl/sorter" /> -->
+		<style>
+@font-face {
+  font-family: 'Indie Flower';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/indieflower/v24/m8JVjfNVeKWVnh3QMuKkFcZVaUuH.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Atkinson Hyperlegible Next';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url(/fonts/ahn-normal.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Atkinson Hyperlegible Next';
+  font-style: italic;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url(/fonts/ahn-italic.woff2) format('woff2');
+}
+
+html {
+  font-family: sans-serif;
+  font-size: 10pt;
+}
+
+* {
+  --bg: #edebe5;
+  --bg-light: #f5f5f2;
+
+  --acc-2: #2f5f3f;
+  --acc-4: #4f7f5f;
+  --acc-9: #9fcfaf;
+  --acc-b: #bfefcf;
+  
+  --hih-4: #2f2501;
+  --hih-6: #6f6521;
+  --hih-8: #8f8541;
+  --hih-f: #faf0c1;
+
+  --gold-9: #9f7000;
+  --gold-a: #af8010;
+  --gold-c: #cfa030;
+  --gold-f: #ffd060;
+}
+
+body {
+  text-align: left;
+  display: grid;
+  background: var(--bg);
+  padding: 1vw 3vw 0 3vw;
+  justify-content: center;
+}
+
+main#wasm {
+  display: flex;
+  gap: 2em;
+
+  /* Push the footer off the screen so that we don't see it
+     "move" away as the wasm app starts working */
+  height: 100vh;
+}
+
+main#static-content {
+  display: grid;
+}
+
+#header {
+  min-width: 40rem;
+  justify-self: center;
+  align-content: center;
+  justify-content: space-between;
+  display: flex;
+  flex-direction: row;
+  gap: 10vw;
+}
+
+main#static-content, #header, #sep, footer {
+  width: 60vw;
+  min-width: 40rem;
+  justify-self: center;
+}
+
+#left, #right {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8em;
+}
+
+#right {
+  width: 20vw;
+}
+
+#content {
+  display: grid;
+  justify-content: center;
+  align-content: start;
+  width: 40vw;
+}
+
+nav {
+  display: flex;
+  flex-direction: row;
+  align-self: center;
+  gap: 1vw;
+}
+
+h1 {
+  margin-top: 0;
+  margin-bottom: 0.3rem;
+  font-size: 1.3rem;
+  color: var(--acc-2);
+}
+
+h1 > a {
+  color: inherit;
+}
+
+h2 {
+  margin-top: 0;
+  margin-bottom: 0.3rem;
+  font-size: 2rem;
+}
+
+h3 {
+  margin-bottom: 0.3rem;
+  font-size: 1.4rem;
+  font-variant: small-caps;
+  font-weight: 800;
+  color: #1f6f2f;
+  position: relative;
+}
+
+h3:not(.card-title):before {
+  content: '~';
+  font-family: monospace;
+  color: var(--hih-6);
+  position: absolute;
+  left: -1.5rem;
+}
+
+h4 {
+  color: var(--acc-2);
+  font-size: 1.3rem;
+}
+
+footer {
+  font-size: 0.8rem;
+}
+
+hr {
+  width: 90%;
+}
+
+table.array {
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 2px;
+}
+
+.elem {
+  font-size: 0.85rem;
+  font-family: monospace;
+  border: 2px solid #888;
+  box-sizing: border-box;
+}
+
+.elem.pad {
+  border: 2px dashed #99a;
+}
+
+/* Fix for empty padding cells being shrunken */
+td.elem.pad::before {
+  content: "";
+  display: inline-block;
+}
+
+.elem.swp {
+  color: #fff;
+  background: #2f4f8f;
+  border: 2px solid #001;
+}
+
+.elem.spc {
+  border: 2px solid #000;
+  background: #ffd060;
+}
+
+.elem.spc.swp {
+  border: 2px solid #001;
+  color: #fff;
+  background: linear-gradient(135deg, #cfa030 30%, #2f4f8f 70%);
+}
+
+.z1 {
+  width: 1.3rem;
+  height: 1.3rem;
+  font-size: 0.7rem;
+}
+
+.z2 {
+  width: 1.2rem;
+  height: 1.2rem;
+  font-size: 0.6rem;
+}
+
+.z3 {
+  width: 1.1rem;
+  height: 1.1rem;
+  font-size: 0.5rem;
+}
+
+.z4 {
+  width: 0.6rem;
+  height: 0.6rem;
+  font-size: 0.3rem;
+  border: none !important;
+}
+
+.z5 {
+  width: 0.4rem;
+  height: 0.4rem;
+  font-size: 0.1rem;
+  border: none !important;
+}
+
+td.td-bar {
+  width: 1rem;
+  vertical-align: bottom;
+}
+
+.bar {
+  background: #3f6f4f;
+  margin: 0 1px 0 1px;
+  align-self: baseline;
+  box-sizing: border-box;
+}
+
+.bar.swp {
+  background: #2f4f8f;
+}
+
+.bar-enclosure {
+  display: flex;
+  margin: 0 0.2rem 0 0.2rem;
+}
+
+.solo-group {
+  border: 2px solid #0000;
+  width: fit-content;
+}
+
+.group {
+  border: 2px solid #888;
+  border-radius: 0.3rem;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  width: fit-content;
+}
+
+.enclosure {
+  margin: 0 0.2rem 0 0.2rem;
+  display: grid;
+  justify-content: center;
+}
+
+p.expl {
+  text-align: center;
+  color: #333;
+  font-style: normal;
+  font-family: "Indie Flower", serif;
+  font-weight: 400;
+  font-size: 1.1rem;
+  margin-top: -0.07rem;
+}
+
+label {
+  color: #343;
+  font-weight: 600;
+  font-family: serif;
+  margin-right: 0.6rem;
+}
+
+a {
+  color: #185;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+a:active {
+  color: #800;
+}
+
+a.btn {
+  display: block;
+  border: 1px solid black;
+  padding: 0.08rem 0.7rem;
+  text-align: center;
+  color: #fff;
+  background: #b22;
+  text-decoration: none;
+}
+
+a.btn:hover {
+  background: #800;
+}
+
+a.btn:active {
+  background: #000;
+}
+
+a.btn:after {
+  content: " →";
+}
+
+a.nav {
+  display: block;
+  border: 1px solid black;
+  padding: 0.08em 0.7em;
+  color: #000;
+  background: #fff;
+  text-decoration: none;
+  margin-bottom: 0.35em;
+  box-shadow: 3px 3px #8e8b89;
+  width: 6rem;
+  text-align: center;
+  position: relative;
+}
+
+a.sel.nav:before {
+  content: "";
+  background-color: var(--acc-2);
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 1rem;
+  height: calc(100% - 4px);
+  display: inline-block;
+}
+
+a.sel.nav:after {
+  content: "";
+  background-color: var(--acc-2);
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 1rem;
+  height: calc(100% - 4px);
+  display: inline-block;
+}
+
+a.nav:hover {
+  color: #fff;
+  background: #222;
+}
+
+a.nav:active {
+  color: #fff;
+  background: #000;
+}
+
+button {
+  border: 2px solid var(--acc-2);
+  background: #9fcfaf;
+  box-shadow: 3px 3px var(--acc-2);
+}
+
+button:hover {
+  background: #bfefcf;
+}
+
+button:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0px 0px var(--acc-2);
+}
+
+select {
+  border: 2px solid var(--acc-2);
+  background: #9fcfaf;
+  box-shadow: 3px 3px var(--acc-2);
+}
+
+select:hover {
+  background: var(--acc-b);
+}
+
+select:open {
+  transform: translate(3px, 3px);
+  box-shadow: 0px 0px var(--acc-2);
+}
+
+/*
+ * Input range stuff from:
+ * https://css-tricks.com/sliding-nightmare-understanding-range-input/
+ */
+[type="range"] {
+  margin: 0;
+  padding: 0;
+  width: 12.5em;
+  height: 1.5em;
+  background: transparent;
+  font: 1em/1 sans-serif;
+}
+
+[type="range"],
+[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+}
+
+[type="range"]::-webkit-slider-runnable-track {
+  box-sizing: border-box;
+  border: 1px solid var(--acc-2);
+  box-shadow: inset 1px 1px var(--acc-2);
+  height: 0.7em;
+  background: #ccc;
+}
+
+input[type="range"]::-moz-range-progress {
+  background-color: var(--acc-9);
+  border: 1px solid var(--acc-2);
+  box-shadow: inset 1px 1px var(--acc-2);
+
+  /* Without this, the progress part of the track is slightly
+   * shorter and appears in this weird way on top of the regular
+   * track. Your reminder of what a horrendous experience styling
+   * form elements is in 2025.
+   *
+   * (Even with this, the heights don't line up exactly, so the
+   * progress part of the track looks slightly taller than the
+   * other part.
+   */
+  height: 0.6em;
+}
+
+[type="range"]::-moz-range-track {
+  box-sizing: border-box;
+  border: 1px solid var(--acc-2);
+  box-shadow: inset 1px 1px var(--acc-2);
+  height: 0.7em;
+  background: #ccc;
+}
+
+[type="range"]::-webkit-slider-thumb {
+  margin-top: -0.625em;
+  box-sizing: border-box;
+  height: 1rem;
+  width: 0.8rem;
+  background: var(--acc-b);
+  border: 1px solid var(--acc-2);
+  box-shadow: inset 1px 1px var(--acc-2);
+  border-radius: 3px;
+}
+
+[type="range"]::-moz-range-thumb {
+  box-sizing: border-box;
+  height: 1rem;
+  width: 0.8rem;
+  background: var(--acc-4);
+  border: 1px solid var(--acc-2);
+  box-shadow: inset 1px 1px var(--acc-2);
+  border-radius: 3px;
+}
+
+select,
+button {
+  font-size: 0.9rem;
+  
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 30ms;
+}
+
+/*
+select,
+button,
+[type=range]::-webkit-slider-thumb,
+[type=range]::-moz-range-thumb 
+{
+  border-radius: 2px;
+}
+*/
+
+.card {
+  background: var(--bg-light);
+  border-width: 1px;
+  border-color: #222 #555 #555 #222;
+  border-style: dotted solid solid dotted;
+  box-shadow: 3px 3px #888;
+  padding: 0.5em;
+}
+
+.card > h3 {
+  margin-top: 0;
+}
+
+hr.fsep {
+  border: 1px dotted #555;
+  margin: -0.6em -0.5em -0.6em -0.5em;
+  width: auto;
+}
+
+hr.bhr {
+  background: radial-gradient(#020 0.5px, #0000 1px) 0 0/3px 3px, transparent;
+  border: 0;
+  opacity: 0.6;
+  height: 0.5rem;
+  max-height: 0.5rem;
+  margin: 0em 0 1em 0;
+  width: 100%;
+}
+
+span.fake {
+  display: inline-block;
+  width: 3rem;
+  padding: 0 2px 0 2px;
+  margin-right: 0.6rem;
+  text-align: center;
+}
+
+table.flat {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table.flat td,
+table.flat th {
+  border: 1px solid #bbb;
+  padding: 0.2rem;
+}
+
+table.flat th {
+  border-top: 1px dotted #000;
+  border-bottom: 1px solid #000;
+  font-size: 1.1rem;
+}
+
+table.flat td:first-child,
+table.flat th:first-child {
+  border-left: 3px solid var(--acc-4);
+  padding-left: 0.5rem;
+}
+
+table.flat td:first-child {
+  width: 4em;
+}
+
+table.flat td:last-child {
+  width: 10%;
+  white-space: nowrap;
+}
+
+.hih {
+  background: var(--hih-f);
+}
+
+table.flat.hih td:first-child,
+table.flat.hih th:first-child {
+  border-left-color: var(--hih-6);
+}
+
+code, .m {
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+#static-content code,
+#static-content .m
+{
+  white-space: pre-wrap;
+  padding: 0 0.2rem 0 0.2rem;
+  border: 2px var(--hih-8) dotted;
+  color: var(--hih-4);
+}
+
+pre {
+  overflow: auto !important;
+  padding: 1rem 1rem 1rem 1rem;
+  border: 2px solid var(--acc-2);
+  background: var(--hih-f);
+  overflow: scroll;
+  display: block;
+  margin: 0.2rem 0 0.6rem 0 !important;
+}
+
+pre > code {
+  display: block;
+  white-space: pre !important;
+  color: #000 !important;
+  border: none !important;
+  white-space: pre-wrap
+}
+
+button.tip {
+  display: inline-block;
+  border: 2px solid var(--acc-2);
+  border-radius: 90%;
+  color: #fff;
+  padding: 0;
+  box-shadow: none;
+  background: linear-gradient(
+    160deg,
+    var(--acc-2) 40%,
+    var(--gold-9) 80%
+  );
+  font-weight: 600;
+  font-family: monospace;
+  font-size: 0.7rem;
+  height: 1rem;
+  width: 1rem;
+  margin-left: -0.4rem;
+}
+
+:popover-open {
+  border: 2px solid var(--acc-2);
+  box-shadow: 4px 4px var(--acc-2);
+  width: 30rem;
+  padding: 0.5rem;
+}
+
+.stack {
+  width: 100%;
+  border-collapse: separate;
+  border: 1px solid #bbb;
+  text-align: center;
+  padding: 0.1rem 0.3rem 0.1rem 0.2rem;
+}
+
+.stack tr {
+  height: fit-content;
+}
+
+.frame {
+  background: var(--bg-light);
+  border: 1px dashed var(--acc-2);
+  height: 1.3rem;
+}
+
+.frame-number {
+  width: 1rem;
+  height: 1.3rem;
+}
+
+.empty-frame {
+  border: 1px solid var(--acc-4);
+  background: radial-gradient(#888 0.5px, #0000 1px) 0 0/3px 3px, transparent;
+}
+
+.stack tr:first-of-type > .frame,
+.stack tr:first-of-type > .frame-number.empty-frame
+{
+  /*background: var(--hih-f);*/
+  border: 1px solid var(--hih-6);
+  border-top: 3px solid var(--hih-6);
+}
+
+.sidenote {
+  padding: 12px;
+  border: 2px dashed #888;
+  border-radius: 15px;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+.sidenote-icon {
+  display: inline-block;
+  position: absolute;
+  left: -8px;
+  top: 0.5rem;
+  font-size: 1.3rem;
+  font-weight: 600;
+  background-color: var(--bg);
+}
+
+img.inline, svg.inline {
+  display: inline-block;
+  width: auto;
+  max-height: 1.2rem;
+  margin: 0;
+  padding: 0;
+  image-orientation: from-image;
+  vertical-align: middle;
+}
+		</style>
+	</head>
+	<body>
+		<div id="header">
+			<h1><a href="/">Sorting Tutor</a></h1>
+			<nav>
+				{% for page in config.extra.navbar %}
+					<a
+						class="nav{% if current_path == page.path %} sel{% endif %}"
+						href="{{ page.path }}"
+					>
+						{{ page.title }}
+					</a>
+				{% endfor %}
+			</nav>
+		</div>
+
+		<div id="sep">
+			<hr style="margin-top: 0.1rem" class="bhr" />
+			<br />
+		</div>
+
+		<div id="mountpoint">
+		</div>
+
+		<main id="static-content">
+		{% block homelink %}
+		{% endblock homelink %}
+
+		{% block content %}
+		{{ section.content | safe }}
+		{% endblock content %}
+
+		{% block footer %}
+		<footer>
+		<br />
+		<hr class="bhr" />
+		<p style="margin: 0.2rem 0 0.2rem 0">
+			This site was create without the use of generative LLMs. ~ Opinions reflect those of your employer.
+		</p>
+		<table style="width:100%">
+		<tr>
+			<td style="padding:0" align='left'>
+				kiedtl © 2025 —
+				<a rel='license' href='http://creativecommons.org/licenses/by-nc-nd/4.0/'>
+<svg class="inline" version="1.0" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	width="64px" height="64px" viewBox="5.5 -3.5 64 64" enable-background="new 5.5 -3.5 64 64" xml:space="preserve">
+<g>
+	<circle fill="#FFFFFF" cx="37.785" cy="28.501" r="28.836"/>
+	<path d="M37.441-3.5c8.951,0,16.572,3.125,22.857,9.372c3.008,3.009,5.295,6.448,6.857,10.314
+		c1.561,3.867,2.344,7.971,2.344,12.314c0,4.381-0.773,8.486-2.314,12.313c-1.543,3.828-3.82,7.21-6.828,10.143
+		c-3.123,3.085-6.666,5.448-10.629,7.086c-3.961,1.638-8.057,2.457-12.285,2.457s-8.276-0.808-12.143-2.429
+		c-3.866-1.618-7.333-3.961-10.4-7.027c-3.067-3.066-5.4-6.524-7-10.372S5.5,32.767,5.5,28.5c0-4.229,0.809-8.295,2.428-12.2
+		c1.619-3.905,3.972-7.4,7.057-10.486C21.08-0.394,28.565-3.5,37.441-3.5z M37.557,2.272c-7.314,0-13.467,2.553-18.458,7.657
+		c-2.515,2.553-4.448,5.419-5.8,8.6c-1.354,3.181-2.029,6.505-2.029,9.972c0,3.429,0.675,6.734,2.029,9.913
+		c1.353,3.183,3.285,6.021,5.8,8.516c2.514,2.496,5.351,4.399,8.515,5.715c3.161,1.314,6.476,1.971,9.943,1.971
+		c3.428,0,6.75-0.665,9.973-1.999c3.219-1.335,6.121-3.257,8.713-5.771c4.99-4.876,7.484-10.99,7.484-18.344
+		c0-3.543-0.648-6.895-1.943-10.057c-1.293-3.162-3.18-5.98-5.654-8.458C50.984,4.844,44.795,2.272,37.557,2.272z M37.156,23.187
+		l-4.287,2.229c-0.458-0.951-1.019-1.619-1.685-2c-0.667-0.38-1.286-0.571-1.858-0.571c-2.856,0-4.286,1.885-4.286,5.657
+		c0,1.714,0.362,3.084,1.085,4.113c0.724,1.029,1.791,1.544,3.201,1.544c1.867,0,3.181-0.915,3.944-2.743l3.942,2
+		c-0.838,1.563-2,2.791-3.486,3.686c-1.484,0.896-3.123,1.343-4.914,1.343c-2.857,0-5.163-0.875-6.915-2.629
+		c-1.752-1.752-2.628-4.19-2.628-7.313c0-3.048,0.886-5.466,2.657-7.257c1.771-1.79,4.009-2.686,6.715-2.686
+		C32.604,18.558,35.441,20.101,37.156,23.187z M55.613,23.187l-4.229,2.229c-0.457-0.951-1.02-1.619-1.686-2
+		c-0.668-0.38-1.307-0.571-1.914-0.571c-2.857,0-4.287,1.885-4.287,5.657c0,1.714,0.363,3.084,1.086,4.113
+		c0.723,1.029,1.789,1.544,3.201,1.544c1.865,0,3.18-0.915,3.941-2.743l4,2c-0.875,1.563-2.057,2.791-3.541,3.686
+		c-1.486,0.896-3.105,1.343-4.857,1.343c-2.896,0-5.209-0.875-6.941-2.629c-1.736-1.752-2.602-4.19-2.602-7.313
+		c0-3.048,0.885-5.466,2.658-7.257c1.77-1.79,4.008-2.686,6.713-2.686C51.117,18.558,53.938,20.101,55.613,23.187z"/>
+</g>
+</svg>
+				</a>
+			</td>
+			<td align='right'>
+				<a href='https://github.com/kiedtl/badges'>
+					<img class=inline src='//tilde.team/~kiedtl/images/badges/netscape/dark.gif' />
+				</a>
+			</td>
+		</tr>
+		</table>
+		</footer>
+		{% endblock footer %}
+		</main>
+	</body>
+</html>

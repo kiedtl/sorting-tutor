@@ -1,2 +1,4 @@
 /target
 /dist
+/site/public
+/site/static/wasm/
