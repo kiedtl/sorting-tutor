@@ -4,12 +4,28 @@ title = "About"
 
 ## About
 
-Sorting Tutor is built in
-[WebAssembly](https://en.wikipedia.org/wiki/WebAssembly), in
-[Rust](https://rust-lang.org/) using the [Leptos](https://leptos.dev/)
-framework. The source is available under the MIT license on
-[GitHub](https://github.com/kiedtl/sorting-tutor).
+Sorting Tutor is a [WebAssembly](https://en.wikipedia.org/wiki/WebAssembly) app,
+built in [Rust](https://rust-lang.org/) using the [Leptos](https://leptos.dev/)
+framework. Static content is made with [Zola](https://getzola.org). The source
+is available on
+[GitHub](https://github.com/kiedtl/sorting-tutor) (under the MIT licence for the
+code, and CC-BY-NC-ND for static content).
 
+<p>
+<a target="_blank" href='https://github.com/kiedtl/sorting-tutor'>
+	<img class="inline badge" src='//tilde.team/~kiedtl/images/badges/source/github-dark.png' />
+</a>
+
+<a target="_blank" href='https://github.com/kiedtl/badges'>
+	<img class="inline badge" src='//tilde.team/~kiedtl/images/badges/rust/cultist-dark-rust.png' />
+</a>
+
+<a target="_blank" href='https://github.com/kiedtl/badges'>
+	<img class="inline badge" src='//tilde.team/~kiedtl/images/badges/rust/lifetime-dark.png' />
+</a>
+</p>
+
+This site is a work in progress. All comments, suggestions, bikeshedding, and related hatemail (`kiedtl at <current website> dot team`) are appreciated.
 
 ### Architecture
 
@@ -50,12 +66,12 @@ while let CoroutineState::Yielded(value) = coroutine.resume() {
 ```
 
 Naturally, this makes writing the sorting functions much easier, as there is no
-need to manually write a state machine — one simply writes the sorting algorithm
+need to manually craft a state machine — one simply writes the sorting algorithm
 as normal, and sprinkles in `yield` statements where a snapshot of the
 partially-sorted data is desired.
 
 ```
-pub fn selection_sort(mut x: List) -> impl Coroutine<(), Yield = (), Return = ()> {
+pub fn selection_sort(mut x: List) -> impl Coroutine<(), Yield = Snapshot, Return = ()> {
     #[coroutine] static move || {
         for i in 0..(x.len() - 1) {
             let min = (i..x.len())
@@ -70,9 +86,32 @@ pub fn selection_sort(mut x: List) -> impl Coroutine<(), Yield = (), Return = ()
 ```
 
 {% sidenote() %}
-If you don't know Rust, don't be frightened by the `-> impl Coroutine<...>` — it
-simply indicates that the `selection_sort()` function returns a type that
-implements the `Coroutine` interface, allows us to `resume()` it. Internally,
-the Rust compiler takes our coroutine and desugars it into a state machine that
-implements this interface.
+Don't be frightened by the `-> impl Coroutine<...>` — it simply indicates that
+the function returns something that implements the `Coroutine`
+interface, with the following properties:
+
+- It takes void (`()`, the empty tuple) as an argument,
+- It yields a `Snapshot`, and
+- It returns void.
+
+The `Coroutine` interface defines the `resume()` method, among others.
+
+Internally, the Rust compiler takes our coroutine and does the hard work of
+desugaring it into a state machine that implements this interface — similar to
+how `async` functions are desugared into `Future`s.
 {% end %}
+
+### Prior Art
+
+Sorting Tutor takes inspiration from other visualizers:
+
+- [The Sound of Sorting](https://mszula.github.io/visual-sorting/)
+- [VisuAlgo](https://visualgo.net/en/sorting)
+
+Others exist, but the above were the main inspirations.
+
+This project was created with a more pedagogical focus, in the hopes of helping
+one grok the details of how an algorithm works in addition to getting an
+intuitive understanding of how elements are shuffled around and sorted.
+
+Performance metrics are another key feature.

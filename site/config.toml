@@ -10,6 +10,6 @@ favicon = ""
 
 navbar = [
     { title = "home",    path = "/" },
-    { title = "history", path = "/history/" },
+    { title = "info", path = "/info/" },
     { title = "about",   path = "/about/" },
 ]

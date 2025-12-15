@@ -33,7 +33,8 @@
 
 html {
   font-family: sans-serif;
-  font-size: 10pt;
+  font-size: 0.9rem;
+  line-height: 1.3rem;
 }
 
 * {
@@ -64,6 +65,12 @@ body {
   justify-content: center;
 }
 
+footer {
+  display: flex;
+  flex-direction: row;
+  gap: 2vw;
+}
+
 main#wasm {
   display: flex;
   gap: 2em;
@@ -88,8 +95,8 @@ main#static-content {
 }
 
 main#static-content, #header, #sep, footer {
-  width: 60vw;
-  min-width: 40rem;
+  width: 65vw;
+  min-width: 50rem;
   justify-self: center;
 }
 
@@ -130,7 +137,7 @@ h1 > a {
 
 h2 {
   margin-top: 0;
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.9rem;
   font-size: 2rem;
 }
 
@@ -153,11 +160,33 @@ h3:not(.card-title):before {
 
 h4 {
   color: var(--acc-2);
-  font-size: 1.3rem;
+  font-size: 1.2rem;
+  margin-bottom: 0.3rem;
+  position: relative;
+}
+
+h4:before {
+  content: '~~';
+  font-family: monospace;
+  color: var(--hih-6);
+  position: absolute;
+  left: -2.5rem;
 }
 
 footer {
   font-size: 0.8rem;
+}
+
+p {
+  margin: 0.3rem 0 0.3rem 0;
+}
+
+table:not(.flat, .array), .sidenote, pre {
+  margin: 0.5rem 0 0.5rem 0;
+}
+
+table.flat {
+  margin: 0.2rem 0 0.3rem 0;
 }
 
 hr {
@@ -165,6 +194,7 @@ hr {
 }
 
 table.array {
+  line-height: 1rem;
   table-layout: fixed;
   border-collapse: separate;
   border-spacing: 2px;
@@ -512,7 +542,7 @@ button,
 
 hr.fsep {
   border: 1px dotted #555;
-  margin: -0.6em -0.5em -0.6em -0.5em;
+  margin: 0em -0.5em 0em -0.5em;
   width: auto;
 }
 
@@ -535,6 +565,7 @@ span.fake {
 }
 
 table.flat {
+  line-height: 1.1rem;
   width: 100%;
   border-collapse: collapse;
 }
@@ -580,7 +611,7 @@ code, .m {
   font-size: 0.9rem;
 }
 
-#static-content code,
+#static-content :not(pre) > code,
 #static-content .m
 {
   white-space: pre-wrap;
@@ -682,7 +713,7 @@ button.tip {
 .sidenote-icon {
   display: inline-block;
   position: absolute;
-  left: -8px;
+  left: -0.8rem;
   top: 0.5rem;
   font-size: 1.3rem;
   font-weight: 600;
@@ -697,6 +728,46 @@ img.inline, svg.inline {
   padding: 0;
   image-orientation: from-image;
   vertical-align: middle;
+}
+
+img.badge {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-optimize-contrast;
+  width: auto;
+  /* Badges are 20px but somehow this removes weird distortion */
+  height: 19px;
+  min-height: 19px;
+  max-height: 19px;
+}
+
+#static-content table > tbody > tr > td,
+#static-content table > thead > tr > th {
+  padding: 0.25em 2em 0.25em 0.25em;
+  vertical-align: top;
+}
+
+#static-content table > tbody > tr {
+  border: 1px solid #888;
+}
+
+#static-content table > tbody > tr:nth-child(odd) {
+  background: var(--bg-light);
+}
+
+#static-content table > tbody > tr:nth-child(even) {
+  background: #e8edea;
+}
+
+#static-content table > thead > tr {
+  background: #ddc;
+  border: 1px solid black;
+}
+
+#static-content table {
+  border-collapse: collapse;
+  width: 100%;
 }
 		</style>
 	</head>
@@ -732,15 +803,12 @@ img.inline, svg.inline {
 		{% endblock content %}
 
 		{% block footer %}
+		<hr style="margin:1em 0 0.5em 0" class="bhr" />
 		<footer>
-		<br />
-		<hr class="bhr" />
-		<p style="margin: 0.2rem 0 0.2rem 0">
-			This site was create without the use of generative LLMs. ~ Opinions reflect those of your employer.
-		</p>
-		<table style="width:100%">
-		<tr>
-			<td style="padding:0" align='left'>
+			<p style="margin: 0.2rem 0 0.2rem 0">
+			This site was created without the use of generative AI. ~ Opinions are those of your employer and/or pet hamster.
+				<br />
+				<br />
 				kiedtl © 2025 —
 				<a rel='license' href='http://creativecommons.org/licenses/by-nc-nd/4.0/'>
 <svg class="inline" version="1.0" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
@@ -768,14 +836,10 @@ img.inline, svg.inline {
 </g>
 </svg>
 				</a>
-			</td>
-			<td align='right'>
-				<a href='https://github.com/kiedtl/badges'>
-					<img class=inline src='//tilde.team/~kiedtl/images/badges/netscape/dark.gif' />
-				</a>
-			</td>
-		</tr>
-		</table>
+				</p>
+			<a href='https://github.com/kiedtl/badges'>
+				<img class="inline badge" src='//tilde.team/~kiedtl/images/badges/netscape/dark.gif' />
+			</a>
 		</footer>
 		{% endblock footer %}
 		</main>

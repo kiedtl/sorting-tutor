@@ -1,0 +1,61 @@
+<math xmlns="http://www.w3.org/1998/Math/MathML">
+  <mi mathvariant="normal">O</mi>
+  <mo>(</mo>
+
+  {% if s == "1" %}
+    <mn>1</mn>
+  {% elif s == "n" %}
+    <mi>n</mi>
+  {% elif s == "n2" %}
+    <msup>
+      <mi>n</mi>
+      <mn>2</mn>
+    </msup>
+  {% elif s == "dn" %}
+    <mi>d</mi>
+    <mo>&#x22C5;</mo>
+    <mi>n</mi>
+  {% elif s == "n+N" %}
+    <mi>n</mi>
+    <mo>+</mo>
+    <mi>N</mi>
+  {% elif s == "nlogk" %}
+    <mi>n</mi>
+    <mo>&#x2062;</mo>
+    <mi>log</mi>
+    <mo>&#x2061;</mo>
+    <mi>k</mi>
+  {% elif s == "nlogn" %}
+    <mi>n</mi>
+    <mo>&#x2062;</mo>
+    <mi>log</mi>
+    <mo>&#x2061;</mo>
+    <mi>n</mi>
+  {% elif s == "n2logn" %}
+    <msup>
+      <mi>n</mi>
+      <mn>2</mn>
+    </msup>
+    <mo>&#x2062;</mo>
+    <mi>log</mi>
+    <mo>&#x2061;</mo>
+    <mi>n</mi>
+  {% elif s == "nlog2n" %}
+    <mi>n</mi>
+    <mo>&#x2062;</mo>
+    <msup>
+      <mi>log</mi>
+      <mn>2</mn>
+    </msup>
+    <mo>&#x2061;</mo>
+    <mi>n</mi>
+  {% elif s == "logn" %}
+    <mi>log</mi>
+    <mo>&#x2061;</mo>
+    <mi>n</mi>
+  {% else %}
+    Unknown s {{ arg }}
+  {% endif %}
+
+  <mo>)</mo>
+</math>
