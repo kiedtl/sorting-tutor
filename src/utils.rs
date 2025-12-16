@@ -264,40 +264,36 @@ fn list_into_view(
     // let width_str = format!("width:{width}em");
 
     view! {
-        <table class="array"> // style=width_str>
-            <tr>
-            {move || (0..spadding).map(|_| {
-                let c = pad_class.clone();
-                view! {
-                    <td class=c></td>
-                }
-            }).collect_view()}
-            {move || s.iter().copied().enumerate().map(|(i, v)| {
-                let swp = match swapped {
-                    Some((a, b)) if i == a || i == b => " swp",
-                    _ => "",
-                };
+        {move || (0..spadding).map(|_| {
+            let c = pad_class.clone();
+            view! {
+                <div class=c></div>
+            }
+        }).collect_view()}
+        {move || s.iter().copied().enumerate().map(|(i, v)| {
+            let swp = match swapped {
+                Some((a, b)) if i == a || i == b => " swp",
+                _ => "",
+            };
 
-                let special = if Some(i) == special {
-                    " spc"
-                } else {
-                    ""
-                };
+            let special = if Some(i) == special {
+                " spc"
+            } else {
+                ""
+            };
 
-                let class = format!("elem{swp}{special}{elem_width_class}");
+            let class = format!("elem{swp}{special}{elem_width_class}");
 
-                view! {
-                    <td class=class>{v}</td>
-                }
-            }).collect_view()}
-            {move || (0..epadding).map(|_| {
-                let c = pad_class_cloned.clone();
-                view! {
-                    <td class=c></td>
-                }
-            }).collect_view()}
-            </tr>
-        </table>
+            view! {
+                <div class=class>{v}</div>
+            }
+        }).collect_view()}
+        {move || (0..epadding).map(|_| {
+            let c = pad_class_cloned.clone();
+            view! {
+                <div class=c></div>
+            }
+        }).collect_view()}
     }
 }
 

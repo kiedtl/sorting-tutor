@@ -244,7 +244,7 @@ p {
   margin: 0.3rem 0 0.3rem 0;
 }
 
-table:not(.flat, .array), .sidenote, pre {
+table:not(.flat), .sidenote, pre {
   margin: 0.5rem 0 0.5rem 0;
 }
 
@@ -261,13 +261,6 @@ hr {
   aspect-ratio: 1 / 1;
   border: 1px solid #888;
   background: var(--bg-light);
-}
-
-table.array {
-  line-height: 1rem;
-  table-layout: fixed;
-  border-collapse: separate;
-  border-spacing: 2px;
 }
 
 .elem {
@@ -368,15 +361,17 @@ td.td-bar {
   border: 2px solid #888;
   border-radius: 0.3rem;
   justify-content: center;
-  margin-bottom: 1.5rem;
   display: flex;
   flex-direction: column;
   width: fit-content;
+  margin-bottom: 1.5rem;
+  padding: 0.1rem 0 0.1rem 0;
 }
 
 .enclosure {
   margin: 0 0.2rem 0 0.2rem;
-  display: grid;
+  display: flex;
+  gap: 2px;
   justify-content: center;
 }
 
