@@ -6,7 +6,7 @@ build_search_index = false
 highlight_code = false
 
 [extra]
-favicon = ""
+favicon = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAAXNSR0IArs4c6QAAAGZQTFRFAAAAIiA0RSg8Zjkxj1Y733Em2aBm7sOa+/I2meVQar4wN5RuS2kvUkskMjw5Pz90MGCCW27hY5v/X83ky9v8////m623hH6HaWpqWVZSdkKKrDIy2Vdj13u6j5dKim8wRF8rJyU7KQp98gAAACJ0Uk5TAP///////////////////////////////////////////y79k78AAAD1SURBVDiNhZPBjsMgDEQ7UrS5cOZs//9PlvGYxaRp6la1qB+ewSGv40e8jr/HIPC0XwAY7viMAvgAvAQ3+AK8MfRnlNUUxynAMQHWitYEgGYmoJZ3gB0wFcbKrEhkh9Qev5Z8AUgsi2NlFaBJesA8YC73Dq39TyKB4sGj55pSI7ED2mKNH0ek6ylUoP0bwHMOBFYHXEetZAHCeJoCTAk9E81t6yDRmJeloleTmi2fOiRx48HSQ4LboO5u2+XCAL3HtRwJmbY5oKMrje9M7gvoDElFBdHBNw/qrRREPab2SJuVHlaKxKd/dU3gIc58ec+vMYAf8QbzvStV8uC+GQAAAABJRU5ErkJggg=="
 
 navbar = [
     { title = "home",    path = "/" },

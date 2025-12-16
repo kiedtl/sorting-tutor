@@ -49,7 +49,29 @@ ind[adaptive]:before {
 }
 
 math {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+}
+
+@media screen and (max-width: 50rem) {
+  math {
+    font-size: 0.8rem;
+  }
+
+  ind:before {
+    width: 3.5rem;
+    font-size: 0.6rem;
+  }
+}
+
+@media screen and (max-width: 40rem) {
+  math {
+    font-size: 0.7rem;
+  }
+
+  ind:before {
+    width: 3.1rem;
+    font-size: 0.5rem;
+  }
 }
 </style>
 

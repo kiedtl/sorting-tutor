@@ -1,3 +1,8 @@
+Data options
+- Kind (shuffled, sorted-ascending, sorted-descending, sorted-middle "mountain")
+- Generation (random, sequential, fibonacci)
+- Input range
+
 page: Sorting Algo History
 - Inventor
 - Date of invention

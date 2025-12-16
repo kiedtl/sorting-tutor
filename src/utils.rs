@@ -36,6 +36,10 @@ impl<Y> Coro<Y> {
             done: false
         }
     }
+
+    pub fn is_done(&self) -> bool {
+        self.done
+    }
 }
 
 impl<Y> Iterator for Coro<Y> {
@@ -156,10 +160,10 @@ impl RecorderState {
 
 pub fn size_class(item_len: usize) -> &'static str {
     match item_len {
-        00..16 => " z1",
-        16..24 => " z2",
-        24..40 => " z3",
-        40..56 => " z4",
+        00..15 => " z1",
+        15..20 => " z2",
+        20..30 => " z3",
+        30..40 => " z4",
         _ => " z5",
     }
 }
@@ -391,7 +395,7 @@ impl IsVew for VHeap {
 
         let listview = list_into_view(0, 0, &self.heap, swapped, None).into_any();
 
-        let font_size = "0.8em";
+        let font_size = "0.75em";
         let bw = 20;
         let bh = 20;
         let bdr = 2;
@@ -423,7 +427,14 @@ impl IsVew for VHeap {
                     {listview}
                 </div>
                 <div class="enclosure">
-                    <svg xmlns="http://www.w3.org/2000/svg" width=width height=height>
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        //width=width height=height
+                        width="100%" height="100%"
+                        style=move || format!("max-width: {width}px; height: {height}px")
+                        viewBox=move || format!("0 0 {width} {height}")
+                        preserveAspectRatio="xMidYMid meet"
+                    >
                         <defs>
                           <linearGradient id="member" gradientTransform="rotate(90)">
                             <stop offset="80%" stop-color="#3f6f4f" />

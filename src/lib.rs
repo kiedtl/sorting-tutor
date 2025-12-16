@@ -13,11 +13,14 @@ use crate::sorter::{Recorder, Algorithm, ALGORITHMS, List};
 
 use std::pin::Pin;
 use std::ops::Coroutine;
+use std::ops::Deref;
 
 use gloo::timers::future::TimeoutFuture;
+use leptos::html;
 use leptos::prelude::*;
-use leptos_use::*;
 use rand::prelude::*;
+use reactive_stores::{Subfield, Store};
+use leptos::tachys::reactive_graph::bind::IntoSplitSignal;
 use wasm_bindgen_futures::spawn_local;
 use wasm_bindgen::prelude::*;
 use web_sys::console;
@@ -25,6 +28,43 @@ use web_sys::console;
 #[macro_export]
 macro_rules! log {
     ($($t:tt)*) => (::web_sys::console::log_1(&format!($($t)*).into()))
+}
+
+fn gen_values(
+    rng: &mut ThreadRng,
+    generation: DataGenerationOption,
+    shape: DataShapeOption,
+    size: usize,
+) -> Box<[usize]> {
+    let mut v: Vec<usize> = match generation {
+        DataGenerationOption::Random => (0..size).map(|_| rng.random_range(10..99)).collect(),
+        DataGenerationOption::Sequential => (1..=size).collect(),
+    };
+
+    let prepare_divide_list = |v: &mut Vec<usize>| {
+        v.sort();
+        for i in 0..(size / 2) {
+            v.swap(i, i * 2);
+        }
+    };
+
+    match shape {
+        DataShapeOption::Shuffled => v.shuffle(rng),
+        DataShapeOption::Ascending => v.sort(),
+        DataShapeOption::Descending => v.sort_by(|a, b| b.cmp(a)),
+        DataShapeOption::Mountain => {
+            prepare_divide_list(&mut v);
+            (&mut v[..size / 2]).sort();
+            (&mut v[size / 2..]).sort_by(|a, b| b.cmp(a));
+        },
+        DataShapeOption::Valley => {
+            prepare_divide_list(&mut v);
+            (&mut v[size / 2..]).sort();
+            (&mut v[..size / 2]).sort_by(|a, b| b.cmp(a));
+        },
+    }
+
+    v.into_boxed_slice()
 }
 
 fn run_once(
@@ -37,49 +77,156 @@ fn run_once(
     }
 }
 
-const VISUAL_MODES: &[VisualMode] = &[
-    // Default option must be first
-    VisualMode::BarsAndAllContent,
-
-    VisualMode::Bars,
-
-    // VisualMode::BarsAndCurrentState,
-    // VisualMode::BarsAndAllState,
-    // VisualMode::BarsAndCurrentContent,
-];
-
-#[derive(Copy, Clone, Debug, Default, PartialEq)]
-enum VisualMode {
-    Bars,
-
-    // BarsAndCurrentState,
-    // BarsAndAllState,
-    // BarsAndCurrentContent,
-
-    #[default]
-    BarsAndAllContent,
+#[derive(Store, Copy, Clone,)]
+struct VisualOptions {
+    grid: bool,
+    bars: bool,
+    values: bool,
+    history: bool,
 }
 
-impl std::fmt::Display for VisualMode {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            VisualMode::Bars => "bars only",
-            VisualMode::BarsAndAllContent => "full",
-        })
+impl Default for VisualOptions {
+    fn default() -> Self {
+        Self {
+            grid: true,
+            bars: true,
+            values: true,
+            history: true,
+        }
+    }
+}
+
+#[derive(Store, Copy, Clone)]
+struct DataOptions {
+    shape: DataShapeOption,
+    generation: DataGenerationOption,
+    size: usize,
+}
+
+impl Default for DataOptions {
+    fn default() -> Self {
+        Self {
+            generation: Default::default(),
+            shape: Default::default(),
+            // Default size is power of two minus two -- good for heapsort, since it
+            // means an "almost-full" tree
+            size: 14,
+        }
+    }
+}
+
+macro_rules! enum_selection {
+    (
+        $(#[$toplevelmetas:meta])*
+        enum $enum_name:ident {
+            $(
+                $(#[$m:meta])*
+                $field:ident = $value:expr,
+            )+
+        }
+    ) => {
+        $(#[$toplevelmetas])*
+        enum $enum_name {
+            $($(#[$m])* $field,)*
+        }
+
+        impl $enum_name {
+            pub fn selection_option_view() -> impl IntoView {
+                use leptos::html::option;
+                (
+                    $(
+                        option().attr("value", $value).child($value),
+                    )+
+                )
+            }
+        }
+
+        impl From<&'_ str> for $enum_name {
+            fn from(s: &str) -> Self {
+                [ $(($enum_name::$field, $value),)+ ]
+                    .iter()
+                    .copied()
+                    .find(|(inv, inv_str)| *inv_str == s)
+                    .map(|(inv, _)| inv)
+                    .unwrap_or($enum_name::default())
+            }
+        }
+
+        impl std::fmt::Display for $enum_name {
+            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(f, "{}", match self {
+                    $(
+                        $enum_name::$field => $value,
+                    )+
+                })
+            }
+        }
+    }
+}
+
+enum_selection! {
+    #[derive(Copy, Clone, Default)]
+    enum DataGenerationOption {
+        #[default]
+        Sequential = "sequential",
+        Random = "random",
+    }
+}
+
+enum_selection! {
+    #[derive(Copy, Clone, Default)]
+    enum DataShapeOption {
+        #[default]
+        Shuffled = "shuffled",
+        Ascending = "ascending",
+        Descending = "descending",
+        Mountain = "mountain",
+        Valley = "valley",
     }
 }
 
 #[component]
+fn VisualControlCheckbox(
+    text: &'static str,
+    binding: Subfield<Store<VisualOptions>, VisualOptions, bool>,
+    disabled: impl Fn() -> bool + Copy + Send + Sync + 'static,
+) -> impl IntoView
+{
+    use leptos::attr::Checked;
+    use leptos::html::{tr, td, label, input};
+    tr()
+        .child(
+            td().child(
+                label()
+                    .class(move || if disabled() { "strike" } else { "" })
+                    .attr("for", text)
+                    .child(text)
+            )
+        )
+        .child(
+            td()
+                .attr("colspan", 2)
+                .child(
+                    input()
+                        .attr("type", "checkbox")
+                        .attr("name", text)
+                        .attr("disabled", disabled)
+                        .bind(Checked, binding)
+                )
+        )
+}
+
+#[component]
 fn Control(
-    visual_r: ReadSignal<VisualMode>,
-    visual_w: WriteSignal<VisualMode>,
+    rng: WriteSignal<ThreadRng, LocalStorage>,
+    vopts: Store<VisualOptions>,
     algo_r: ReadSignal<Algorithm>,
     algo_w: WriteSignal<Algorithm>,
     history_r: ReadSignal<Vec<Vew>>,
     history_w: WriteSignal<Vec<Vew>>,
     sorter_w: WriteSignal<Coro<Vew>, LocalStorage>,
-    size_r: ReadSignal<usize>,
-    size_w: WriteSignal<usize>,
+    values_w: WriteSignal<Box<[usize]>>,
+    dopts: Store<DataOptions>,
     recorder: Recorder,
 ) -> impl IntoView
 {
@@ -118,7 +265,10 @@ fn Control(
             <h3 class="card-title">"Settings"</h3>
             <hr class="bhr" />
             <table class="flat">
-                <th colspan="3">"Algorithm"</th>
+                <thead>
+                    <th colspan="3">"Algorithm"</th>
+                </thead>
+                <tbody>
                 <tr>
                     <td>
                         <label>"Sorter"</label>
@@ -167,60 +317,93 @@ fn Control(
                         <i class="m">{move || delay_r.get()}"ms"</i>
                     </td>
                 </tr>
+                </tbody>
             </table>
-            <br />
             <hr class="fsep" />
-            <br />
             <table class="flat">
-                <th colspan="3">"Data"</th>
+                <thead>
+                    <th colspan=3>"Data"</th>
+                </thead>
+                <tbody>
                 <tr>
                     <td>
                         <label for="Size">Size</label>
                     </td>
                     <td>
                         <input
-                            type="range" id="size" name="Size" min="4" max="96"
-                            value=move || size_r.get()
+                            type="range" id="size" name="Size" min="4" max="48"
+                            value=move || dopts.size().get()
                             on:input:target=move |ev| {
-                                size_w.set(ev.target().value().parse().unwrap());
+                                dopts.size().set(ev.target().value().parse().unwrap());
                             }
                         />
                     </td>
                     <td>
-                        <i class="m">{move || size_r.get()}</i>
+                        <i class="m">{move || dopts.size().get()}</i>
                     </td>
                 </tr>
                 <tr>
                     <td>
-                        <label>"Visual"</label>
+                        <label>"Shape"</label>
                     </td>
                     <td colspan="2">
                         <select
                             on:change:target=move |ev| {
-                                let v = ev.target().value();
-                                visual_w.set(
-                                    VISUAL_MODES
-                                        .iter()
-                                        .copied()
-                                        .find(|vm| vm.to_string() == v)
-                                        .unwrap_or(VisualMode::default())
-                                );
+                                dopts.shape().set(DataShapeOption::from(ev.target().value().as_str()));
                             }
-                            prop:value=move || visual_r.get().to_string()
+                            prop:value=move || dopts.shape().get().to_string()
                         >
-                            {move || VISUAL_MODES.iter()
-                                .enumerate()
-                                .map(|(i, vm)| {
-                                    let s = vm.to_string();
-                                    view! {
-                                        <option value={s}>{s.clone()}</option>
-                                    }
-                                })
-                                .collect_view()
-                            }
+                            {DataShapeOption::selection_option_view()}
                         </select>
                     </td>
                 </tr>
+                <tr>
+                    <td>
+                        <label>"Gen"</label>
+                    </td>
+                    <td colspan="2">
+                        <select
+                            on:change:target=move |ev| {
+                                dopts.generation().set(DataGenerationOption::from(ev.target().value().as_str()));
+                            }
+                            prop:value=move || dopts.generation().get().to_string()
+                        >
+                            {DataGenerationOption::selection_option_view()}
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="3" style="text-align:right">
+                        <button
+                            style="width:33%"
+                            on:click=move |_| {
+                                values_w.set(gen_values(
+                                        &mut rng.write_untracked(),
+                                        dopts.generation().get(),
+                                        dopts.shape().get(),
+                                        dopts.size().get()
+                                ));
+                            }
+                        >
+                            "Reset"
+                        </button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+            <hr class="fsep" />
+            <table class="flat">
+                <thead>
+                    <th colspan="3">"Visualization"</th>
+                </thead>
+                <tbody>
+                    <VisualControlCheckbox text="Show grid" binding=vopts.grid() disabled=|| false />
+                    <VisualControlCheckbox text="Show bars" binding=vopts.bars() disabled=|| false />
+                    <VisualControlCheckbox text="Show values" binding=vopts.values() disabled=|| false />
+                    <VisualControlCheckbox text="Show history" binding=vopts.history()
+                        disabled=move || !vopts.values().get()
+                    />
+                </tbody>
             </table>
         </div>
         <div class="card">
@@ -251,7 +434,8 @@ fn Control(
 
 #[component]
 fn Content(
-    visual_r: ReadSignal<VisualMode>,
+    dopts: Store<DataOptions>,
+    vopts: Store<VisualOptions>,
     history_r: ReadSignal<Vec<Vew>>,
 ) -> impl IntoView
 {
@@ -259,34 +443,109 @@ fn Content(
     // let bar_width_fac = move || if bars() > 32 { 1. } else { 1.7 };
     // let bar_width = move || bars() as f32 * bar_width_fac();
 
-    let bars = move || history_r.read().last().unwrap().list().iter().copied().enumerate().collect::<Vec<_>>();
+    let bars = move || {
+        let history = history_r.read();
+        let bars = history.last().unwrap().list();
+
+        let min = bars.iter().copied().min().unwrap();
+        let max = bars.iter().copied().max().unwrap();
+
+        bars
+            .iter()
+            .copied()
+            .map(|v| (v - min) * 100 / (max - min))
+            .enumerate()
+            .collect::<Vec<_>>()
+    };
     let bars_len = move || history_r.read().last().unwrap().list().len();
     let were_bars_swapped = move |i| match history_r.read().last().unwrap().swapped() {
         Some((a, b)) if i == a || i == b => true,
         _ => false,
     };
 
+    let canvas_ref = NodeRef::<html::Canvas>::new();
+
+    Effect::new(move || {
+        if let Some(canvas_ref) = canvas_ref.get() {
+            let new_dim = match dopts.size().get() {
+                0..8 => "100",
+                8..18 => "150",
+                18..25 => "220",
+                25..35 => "320",
+                _ => "400",
+            };
+            canvas_ref.set_attribute("width", new_dim);
+            canvas_ref.set_attribute("height", new_dim);
+        }
+    });
+
+    Effect::new(move || {
+        if let Some(canvas_ref) = canvas_ref.get() {
+            let context = canvas_ref
+              .get_context("2d")
+              .unwrap()
+              .unwrap()
+              .dyn_into::<web_sys::CanvasRenderingContext2d>()
+              .unwrap();
+
+            let bars = bars();
+
+            let canv_w = canvas_ref.width() as f64;
+            let canv_h = canvas_ref.height() as f64;
+            let w = 5.; //(canv_w / bars.len() as f64) * 0.9;
+            let h = 5.; //(canv_h / bars.len() as f64) * 0.9;
+            let px = ((canv_w - (bars.len() as f64 * w)) / 2.).max(0.);
+            let py = ((canv_h - (bars.len() as f64 * h)) / 2.).max(0.);
+
+            context.clear_rect(0., 0., canv_w, canv_h);
+
+            for &(place, value) in &bars {
+                let value = value as f64 / 100. * (bars.len() as f64);
+                let angle = std::f64::consts::PI / 4.;
+                let x = px + place as f64 * (w + 1.);
+                let y = py + value        * (w + 1.);
+                context.set_line_width(w);
+                context.begin_path();
+                context.move_to(x, y);
+                context.line_to(x + w * angle.cos(), y + h * angle.sin());
+                context.stroke();
+            }
+        }
+    });
+
     view! {
-        <div class="solo-group">
-            <div class="bar-enclosure">
-                <For
-                    each=move || bars()
-                    key=|&(i, v)| (i, v)
-                    let((i, v))
-                >
-                    <div
-                        class=move || format!(
-                            "{} {}",
-                            utils::size_class(bars_len()),
-                            if were_bars_swapped(i) { "bar swp" } else { "bar" }
-                        )
-                        style=move || format!("height:{v}px")
-                    >
-                    </div>
-                </For>
+        <Show when=move || vopts.grid().get() >
+            <div class="solo-group" style="margin-bottom:1rem">
+                <canvas node_ref=canvas_ref width=400 height=400 id="vancas">
+                    "Really? A browser that doesn't support canvas? In 2025?"
+                </canvas>
             </div>
-        </div>
-        <Show when=move || visual_r.get() == VisualMode::BarsAndAllContent>
+        </Show>
+        <Show when=move || vopts.bars().get() >
+            <div class="solo-group">
+                <div class="bar-enclosure">
+                    <For
+                        each=move || bars()
+                        key=|&(i, v)| (i, v)
+                        let((i, v))
+                    >
+                        <div
+                            class=move || format!(
+                                "{} {}",
+                                utils::size_class(bars_len()),
+                                if were_bars_swapped(i) { "bar swp" } else { "bar" }
+                            )
+                            style=move || format!("height:{}px", (v * 2 / 3) + 15)
+                        >
+                        </div>
+                    </For>
+                </div>
+            </div>
+        </Show>
+        <Show when=move || vopts.values().get() >
+            {move || history_r.read().last().unwrap().into_view()}
+        </Show>
+        <Show when=move || vopts.values().get() && vopts.history().get() >
             <For
                 each=move || {
                     let mut found_important = false;
@@ -295,6 +554,7 @@ fn Content(
                         .iter()
                         .enumerate()
                         .rev()
+                        .skip(1)
                         .filter_map(|(k, item)| {
                             let important = item.is_important();
                             if important || !found_important {
@@ -311,7 +571,7 @@ fn Content(
                         .map(|(i, (k, v))| (k, v.hash()))
                         .collect::<Vec<_>>()
                 }
-                key=|&(k, h)| (k, h)
+                key=|&(k, _)| k
                 let((k, _))
             >
             {move || history_r.read()[k].into_view()}
@@ -337,6 +597,7 @@ fn Right(
                         </th>
                     </tr>
                 </thead>
+                <tbody>
                 <tr>
                     <td>
                         <label>"Comparisons"</label>
@@ -378,6 +639,7 @@ fn Right(
                     </td>
                     <td class="m">{move || recorder.count_calls()}</td>
                 </tr>
+                </tbody>
             </table>
         </div>
         <div class="card">
@@ -414,76 +676,99 @@ fn Right(
 
 #[component]
 fn App() -> impl IntoView {
-    let mut rng = rand::rng();
+    let (_, rng) = signal_local(rand::rng());
 
-    let (visual_r, visual_w) = signal(VisualMode::default());
-
-    // Default size is power of two minus two -- good for heapsort, since it
-    // means an "almost-full" tree
-    let (size_r, size_w) = signal(14);
+    let dopts = Store::new(DataOptions::default());
+    let vopts = Store::new(VisualOptions::default());
 
     let recorder = Recorder::new();
 
-    let (values_r, values_w) = signal({
-        (0..size_r.get_untracked())
-            .map(|_| rng.random_range(10..99))
-            .collect::<Vec<_>>()
-            .into_boxed_slice()
-    });
+    let (values_r, values_w) = signal(gen_values(
+            &mut rng.write_untracked(),
+            dopts.generation().get_untracked(),
+            dopts.shape().get_untracked(),
+            dopts.size().get_untracked()
+    ));
 
     // Need to choose the first, because the <select> element apparently chooses the first option
     // as well(??)
     let (algo_r, algo_w) = signal(ALGORITHMS[0]);
 
     let (history_r, history_w) = signal(vec![Vew::from(&*values_r.read_untracked())]);
-    let (_, sorter_w) = signal_local(Coro::new(
+    let (sorter_r, sorter_w) = signal_local(Coro::new(
             algo_r.get_untracked().func()(
                 values_r.get_untracked(),
                 recorder,
             )
     ));
 
-    // When size/values/algorithm changes, set values
+    // When data options changes, reset values and sorter
     Effect::new(move |_| {
-        if size_r.get() != values_r.read().len() {
-            values_w.set({
-                (0..size_r.get())
-                    .map(|_| rng.random_range(10..99))
-                    .collect::<Vec<_>>()
-                    .into_boxed_slice()
-            });
-        }
+        values_w.set(gen_values(
+                &mut rng.write_untracked(),
+                dopts.generation().get(),
+                dopts.shape().get(),
+                dopts.size().get()
+        ));
 
         history_w.write().clear();
         recorder.reset();
         sorter_w.set(Coro::new(
-                algo_r.get().func()(
-                    values_r.get_untracked(),
+                algo_r.get_untracked().func()(
+                    values_r.get(),
                     recorder,
                 )
         ));
-        run_once(sorter_w, history_w);
+
+        if history_r.read_untracked().is_empty() {
+            run_once(sorter_w, history_w);
+        }
+    });
+
+    // When algorithm changes, just reset sorter
+    Effect::new(move |_| {
+        if history_r.read_untracked().is_empty() {
+            sorter_w.set(Coro::new(
+                    algo_r.get().func()(
+                        values_r.get_untracked(),
+                        recorder,
+                    )
+            ));
+
+            run_once(sorter_w, history_w);
+        } else {
+            let last = Box::from(
+                history_r.read_untracked()
+                    .last()
+                    .unwrap()
+                    .list()
+            );
+            sorter_w.set(Coro::new(
+                    algo_r.get().func()(last, recorder)
+            ));
+        }
     });
 
     view! {
         <main id="wasm">
             <div id="left">
                 <Control
-                    visual_r=visual_r
-                    visual_w=visual_w
+                    rng=rng
                     algo_r=algo_r
                     algo_w=algo_w
                     history_r=history_r
                     history_w=history_w
                     sorter_w=sorter_w
-                    size_w=size_w
-                    size_r=size_r
+                    dopts=dopts
+                    vopts=vopts
+                    values_w=values_w
                     recorder=recorder
                 />
             </div>
             <div id="content">
                 <Content
-                    visual_r=visual_r
+                    dopts=dopts
+                    vopts=vopts
                     history_r=history_r
                 />
             </div>

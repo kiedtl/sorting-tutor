@@ -9,5 +9,5 @@ title = "Sorting Tutor"
     dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 </script>
 
-<link rel="modulepreload" href="/wasm/sort.js" crossorigin="anonymous">
+<link crossorigin rel="modulepreload" href="/wasm/sort.js" crossorigin="anonymous">
 <link rel="preload" href="/wasm/sort_bg.wasm" crossorigin="anonymous" as="fetch" type="application/wasm">
