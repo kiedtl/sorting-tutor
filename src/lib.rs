@@ -206,6 +206,7 @@ fn VisualControlCheckbox(
         .child(
             td()
                 .attr("colspan", 2)
+                .class("tiny")
                 .child(
                     input()
                         .attr("type", "checkbox")
@@ -266,7 +267,7 @@ fn Control(
             <hr class="bhr" />
             <table class="flat">
                 <thead>
-                    <th colspan="3">"Algorithm"</th>
+                    <th colspan=2>"Algorithm"</th>
                 </thead>
                 <tbody>
                 <tr>
@@ -303,6 +304,8 @@ fn Control(
                 <tr>
                     <td>
                         <label for="Delay">Delay</label>
+                        <br />
+                        <span class="mini m">{move || delay_r.get()}"ms"</span>
                     </td>
                     <td>
                         <input
@@ -313,21 +316,20 @@ fn Control(
                             }
                         />
                     </td>
-                    <td>
-                        <i class="m">{move || delay_r.get()}"ms"</i>
-                    </td>
                 </tr>
                 </tbody>
             </table>
             <hr class="fsep" />
             <table class="flat">
                 <thead>
-                    <th colspan=3>"Data"</th>
+                    <th colspan=2>"Data"</th>
                 </thead>
                 <tbody>
                 <tr>
                     <td>
                         <label for="Size">Size</label>
+                        <br />
+                        <span class="mini m">{move || dopts.size().get()}" nums"</span>
                     </td>
                     <td>
                         <input
@@ -337,9 +339,6 @@ fn Control(
                                 dopts.size().set(ev.target().value().parse().unwrap());
                             }
                         />
-                    </td>
-                    <td>
-                        <i class="m">{move || dopts.size().get()}</i>
                     </td>
                 </tr>
                 <tr>
@@ -608,7 +607,7 @@ fn Right(
                             "Element-to-element comparisons. Does not include comparisons made when iterating, etc."
                         </div>
                     </td>
-                    <td class="m">{move || recorder.count_comparisons()}</td>
+                    <td class="tiny m">{move || recorder.count_comparisons()}</td>
                 </tr>
                 <tr>
                     <td>
@@ -620,7 +619,7 @@ fn Right(
                             "Number of times a pair of elements were swapped whilst sorting."
                         </div>
                     </td>
-                    <td class="m">{move || recorder.count_swaps()}</td>
+                    <td class="tiny m">{move || recorder.count_swaps()}</td>
                 </tr>
                 <tr>
                     <td>
@@ -637,7 +636,7 @@ fn Right(
                             </p>
                         </div>
                     </td>
-                    <td class="m">{move || recorder.count_calls()}</td>
+                    <td class="tiny m">{move || recorder.count_calls()}</td>
                 </tr>
                 </tbody>
             </table>
