@@ -547,33 +547,31 @@ fn Content(
         <Show when=move || vopts.values().get() && vopts.history().get() >
             <For
                 each=move || {
-                    let mut found_important = false;
                     history_r
                         .read()
                         .iter()
+                        // First enumeration, the actual index
                         .enumerate()
                         .rev()
+                        // Skip current state, which is already displayed
                         .skip(1)
-                        .filter_map(|(k, item)| {
-                            let important = item.is_important();
-                            if important || !found_important {
-                                if !found_important {
-                                    found_important = important;
-                                }
-                                Some((k, item))
-                            } else {
-                                None
-                            }
-                        })
+                        .filter(|(_, item)| item.is_important())
+                        // Second enumeration, index for items that are actually
+                        // displayed (and in reverse)
                         .enumerate()
+                        // Limit number of items displayed
                         .take_while(|(i, (k, _))| *i < 32)
-                        .map(|(i, (k, v))| (k, v.hash()))
+                        .map(|(i, (k, _))| k)
                         .collect::<Vec<_>>()
                 }
-                key=|&(k, _)| k
-                let((k, _))
+                key=|&k| k
+                let(k)
             >
-            {move || history_r.read()[k].into_view()}
+            {move || {
+                // Not sure why read_untracked is needed but it prevents Leptos
+                // from rerendering the whole thing each time
+                history_r.read_untracked()[k].into_view()
+            }}
             </For>
         </Show>
     }

@@ -5,7 +5,7 @@ use crate::utils::{
     //O, Perf,
     RecorderState,
     Coro,
-    Vew, VList, VHeap, VQuick
+    IsVew, Vew, VList, VHeap, VQuick
 };
 
 use leptos::prelude::{Write, WriteSignal, Read, ReadSignal, Set, signal};
@@ -197,10 +197,21 @@ pub fn selection(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew
         yield VList::new(&x).into();
 
         for i in 0..(x.len() - 1) {
-            let min = (i..x.len())
-                .reduce(|a, v| r.min(a, v, |v| x[v]))
-                .unwrap();
+            // let min = (i..x.len())
+            //     .reduce(|a, v| r.min(a, v, |v| x[v]))
+            //     .unwrap();
 
+            let mut min = i;
+            for j in (i + 1)..x.len() {
+                if x[j] < x[min] {
+                    min = j;
+                    yield VList::new(&x)
+                        .swapped(i, min)
+                        .special(min)
+                        .into_vew()
+                        .fleeting();
+                }
+            }
 
             r.swap(&mut x, i, min);
             yield VList::new(&x)

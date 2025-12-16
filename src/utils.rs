@@ -234,6 +234,10 @@ pub trait IsVew: Send + Sync {
     fn swapped(&self) -> Option<(usize, usize)>;
     fn list(&self) -> &[usize];
     fn into_view(&self) -> AnyView;
+
+    fn into_vew(self) -> Vew where Self: Sized + 'static {
+        Vew::from(self)
+    }
 }
 
 impl<T> From<T> for Vew

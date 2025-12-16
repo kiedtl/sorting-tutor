@@ -7,7 +7,7 @@
 		<meta name="viewport" content="width=device-width,initial-scale=1" />
 		<meta http-equiv="content-type" content="text/html; charset=utf-8">
 		<link href="{% block fav %}{{ config.extra.favicon | safe }}{% endblock fav %}" rel=icon type=image/png>
-		<title>{% block ptitle %}{{ section.title | safe }}{% endblock ptitle %}</title>
+		<title>{% block ptitle %}{{ section.title | safe }}{% endblock ptitle %} / Sorting Tutor</title>
 		<!-- <base href="/~kiedtl/sorter" /> -->
 		<style>
 @font-face {
@@ -36,8 +36,8 @@
 }
 
 * {
-  --bg: #edebe5;
-  --bg-light: #f5f5f2;
+  --bg: #efede7;
+  --bg-light: #f7f7f3;
 
   --acc-2: #2f5f3f;
   --acc-4: #4f7f5f;
@@ -263,6 +263,7 @@ hr {
   background: var(--bg-light);
 }
 
+/* Elements, zooming ((( */
 .elem {
   text-align: center;
   font-size: 0.85rem;
@@ -329,6 +330,7 @@ td.elem.pad::before {
   font-size: 0.1rem;
   border: none !important;
 }
+/* ))) */
 
 td.td-bar {
   width: 1rem;
@@ -436,7 +438,7 @@ a.nav {
   text-decoration: none;
   margin-bottom: 0.35em;
   box-shadow: 3px 3px #8e8b89;
-  width: 6rem;
+  width: 5rem;
   text-align: center;
   position: relative;
 }
@@ -465,12 +467,12 @@ a.sel.nav:after {
 
 a.nav:hover {
   color: #fff;
-  background: #222;
+  background: var(--acc-4);
 }
 
 a.nav:active {
   color: #fff;
-  background: #000;
+  background: var(--acc-2);
 }
 
 button {
@@ -489,6 +491,7 @@ button:active {
   box-shadow: 0px 0px var(--acc-2);
 }
 
+/* Select ((( */
 select {
   width: 100%;
   border: 2px solid var(--acc-2);
@@ -506,6 +509,7 @@ select:open {
   transform: translate(3px, 3px);
   box-shadow: 0px 0px var(--acc-2);
 }
+/* ))) */
 
 /* Checkbox ((( */
 [type="checkbox"] {
@@ -551,9 +555,8 @@ select:open {
 }
 /* ))) */
 
-/*
- * Input range stuff from:
- * https://css-tricks.com/sliding-nightmare-understanding-range-input/
+/* Input range (((
+ * from https://css-tricks.com/sliding-nightmare-understanding-range-input/
  */
 [type="range"] {
   margin: 0;
@@ -622,6 +625,7 @@ select:open {
   box-shadow: inset 1px 1px var(--acc-2);
   border-radius: 3px;
 }
+/* ))) */
 
 select,
 button {
