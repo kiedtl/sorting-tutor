@@ -210,7 +210,7 @@ pub fn selection(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Sna
                 yield VList::new(&x)
                     .current(j)
                     .special(min)
-                    .into_vew()
+                    .into_snapshot()
                     .fleeting();
             }
 
@@ -336,12 +336,14 @@ fn _quicksort<'a>(
 
         let mut cloned: Box<[usize]> = Box::from(&*x);
         let pivot = s + for_coro!(
-            PartitionView { expl, swapped, pivot } in qspartition(&mut x[s..e], r) => {
+            PartitionView { expl, swapped, pivot, fleeting, current } in qspartition(&mut x[s..e], r) => {
                 if let Some((s1, s2)) = swapped {
                     cloned.swap(s + s1, s + s2);
                 }
                 yield VQuick::new(cloned.clone(), swapped, expl)
-                    .layer(s..e, Some(s + pivot));
+                    .layer(s..e, Some(s + pivot))
+                    .current(current)
+                    .set_fleeting(fleeting);
             }
         );
 
@@ -382,6 +384,8 @@ struct PartitionView {
     expl: String,
     swapped: Option<(usize, usize)>,
     pivot: usize,
+    fleeting: bool,
+    current: Option<usize>,
 }
 
 impl PartitionView {
@@ -390,6 +394,8 @@ impl PartitionView {
             expl: expl.to_owned(),
             swapped: Some((s1, s2)),
             pivot: p,
+            fleeting: false,
+            current: None,
         }
     }
 
@@ -398,7 +404,19 @@ impl PartitionView {
             expl: expl.to_owned(),
             swapped: None,
             pivot: p,
+            fleeting: false,
+            current: None,
         }
+    }
+
+    pub fn fleeting(mut self) -> Self {
+        self.fleeting = true;
+        self
+    }
+
+    pub fn current(mut self, v: usize) -> Self {
+        self.current = Some(v);
+        self
     }
 }
 
@@ -408,19 +426,29 @@ fn qspartition<'a>(x: &'a mut [usize], mut r: Recorder) -> impl Coroutine<(), Yi
         let pivot = x.len() / 2;
         yield PartitionView::new2("Chose a pivot", pivot);
         r.swap(x, pivot, x.len() - 1);
-        yield PartitionView::new("Moved pivot to end", pivot, x.len() - 1, pivot);
+        yield PartitionView::new("Moved pivot to end", pivot, x.len() - 1, x.len() - 1);
 
         let mut i = 0;
         for j in 0..x.len() - 1 {
             if r.lt(x[j], x[x.len() - 1]) {
-                r.swap(x, i, j);
-                yield PartitionView::new("Partitioning", i, j, pivot);
+                if i == j {
+                    yield PartitionView::new2("Partitioning", x.len() - 1)
+                        .fleeting()
+                        .current(j);
+                } else {
+                    r.swap(x, i, j);
+                    yield PartitionView::new("Partitioning", i, j, x.len() - 1);
+                }
                 i += 1;
+            } else {
+                yield PartitionView::new2("Partitioning", x.len() - 1)
+                    .fleeting()
+                    .current(j);
             }
         }
 
         r.swap(x, i, x.len() - 1);
-        yield PartitionView::new("Moved pivot back", i, x.len() - 1, pivot);
+        yield PartitionView::new("Moved pivot back", i, x.len() - 1, i);
         i
     }
 }

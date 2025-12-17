@@ -15,7 +15,8 @@ use std::pin::Pin;
 use std::ops::Coroutine;
 use std::ops::Deref;
 
-use gloo::timers::future::TimeoutFuture;
+//use gloo::timers::future::TimeoutFuture;
+use gloo::timers::callback::Timeout;
 use leptos::html;
 use leptos::prelude::*;
 use rand::prelude::*;
@@ -24,6 +25,12 @@ use leptos::tachys::reactive_graph::bind::IntoSplitSignal;
 use wasm_bindgen_futures::spawn_local;
 use wasm_bindgen::prelude::*;
 use web_sys::console;
+
+static DELAYS: [usize; 18] = [
+       0,    8,   16,   24,   32,   64,         // Smaller numbers
+     128,  192,  256,  320,  384,  448,  512,   // Intervals of 64
+    1024, 1280, 1536, 1792, 2048,               // Intervals of 256
+];
 
 #[macro_export]
 macro_rules! log {
@@ -37,7 +44,25 @@ fn gen_values(
     size: usize,
 ) -> Box<[usize]> {
     let mut v: Vec<usize> = match generation {
-        DataGenerationOption::Random => (0..size).map(|_| rng.random_range(10..99)).collect(),
+        DataGenerationOption::RandomUniform => (0..size).map(|_| rng.random_range(10..99)).collect(),
+        DataGenerationOption::RandomGaussian => {
+            // Box-Muller generation
+            // Take from an infinite iterator until we're satisfied.
+            std::iter::repeat_with(|| {
+                const MU: f32 = 50.;
+                const SIGMA: f32 = 100. / 4.;
+
+                let u = rng.random::<f32>().max(f32::MIN_POSITIVE); // Clamp 0 for ln()
+                let v = rng.random::<f32>();
+
+                let z = (-2. * u.ln()).sqrt() * (2. * std::f32::consts::PI * v).cos();
+
+                (MU + SIGMA * z) as usize
+            })
+                .filter(|v| (10..=99).contains(v))
+                .take(size)
+                .collect()
+        },
         DataGenerationOption::Sequential => (1..=size).collect(),
     };
 
@@ -169,7 +194,8 @@ enum_selection! {
     enum DataGenerationOption {
         #[default]
         Sequential = "sequential",
-        Random = "random",
+        RandomUniform = "rng: uniform",
+        RandomGaussian = "rng: gaussian",
     }
 }
 
@@ -226,6 +252,7 @@ fn Control(
     history_r: ReadSignal<Vec<Snapshot>>,
     history_w: WriteSignal<Vec<Snapshot>>,
     sorter_w: WriteSignal<Coro<Snapshot>, LocalStorage>,
+    values_r: ReadSignal<Box<[usize]>>,
     values_w: WriteSignal<Box<[usize]>>,
     dopts: Store<DataOptions>,
     recorder: Recorder,
@@ -233,6 +260,19 @@ fn Control(
 {
     let (running_r, running_w) = signal(false);
     let (delay_r, delay_w) = signal(64);
+
+    // Stop the algorithm if something crucial changes
+    Effect::watch(
+        move || {
+            dopts.size().get();
+            algo_r.get();
+            values_r.get();
+        },
+        move |_, _, _| {
+            running_w.set(false);
+        },
+        true
+    );
 
     view! {
         <div class="card">
@@ -244,12 +284,34 @@ fn Control(
                         running_w.set(false);
                     } else {
                         running_w.set(true);
+
+                        // This whole thing could be just 5 lines of code with
+                        //      TimeoutFuture::new(delay_r.get_untracked() as u32).await
+                        // but that causes an unreachable error when the user changes the
+                        // controls while the future is running. And thanks to the atrocious
+                        // state of Rust WASM debugging there's no stacktrace to speak of.
+                        //
                         spawn_local(async move {
-                            while let Some(view) = sorter_w.write_untracked().next() && running_r.get_untracked() {
-                                history_w.write().push(view);
-                                TimeoutFuture::new(delay_r.get_untracked() as u32).await;
+                            fn run(
+                                running_r: ReadSignal<bool>,
+                                running_w: WriteSignal<bool>,
+                                history_w: WriteSignal<Vec<Snapshot>>,
+                                delay_r: ReadSignal<usize>,
+                                sorter_w: WriteSignal<Coro<Snapshot>, LocalStorage>
+                            ) {
+                                if running_r.get_untracked() && let Some(view) = sorter_w.write_untracked().next() {
+                                    history_w.write().push(view);
+
+                                    Timeout::new(
+                                        delay_r.get_untracked() as u32,
+                                        move || run(running_r, running_w, history_w, delay_r, sorter_w),
+                                    ).forget();
+                                } else {
+                                    running_w.set(false);
+                                }
                             }
-                            running_w.set(false);
+
+                            run(running_r, running_w, history_w, delay_r, sorter_w);
                         });
                     }
                 }
@@ -309,10 +371,14 @@ fn Control(
                     </td>
                     <td>
                         <input
-                            type="range" id="delay" name="Delay" min="0" max="64"
-                            value=move || delay_r.get() / 8
+                            type="range" id="delay" name="Delay" min="0" max=|| DELAYS.len() - 1
+                            value=move || DELAYS.iter().position(|&v| v == delay_r.get()).unwrap_or(0)
                             on:input:target=move |ev| {
-                                delay_w.set(ev.target().value().parse::<usize>().unwrap() * 8);
+                                let raw = ev.target().value()
+                                    .parse::<usize>()
+                                    .unwrap_or(4)
+                                    .min(DELAYS.len());
+                                delay_w.set(DELAYS[raw]);
                             }
                         />
                     </td>
@@ -336,6 +402,7 @@ fn Control(
                             type="range" id="size" name="Size" min="4" max="48"
                             value=move || dopts.size().get()
                             on:input:target=move |ev| {
+                                running_w.set(false);
                                 dopts.size().set(ev.target().value().parse().unwrap());
                             }
                         />
@@ -348,6 +415,7 @@ fn Control(
                     <td colspan="2">
                         <select
                             on:change:target=move |ev| {
+                                running_w.set(false);
                                 dopts.shape().set(DataShapeOption::from(ev.target().value().as_str()));
                             }
                             prop:value=move || dopts.shape().get().to_string()
@@ -363,6 +431,7 @@ fn Control(
                     <td colspan="2">
                         <select
                             on:change:target=move |ev| {
+                                running_w.set(false);
                                 dopts.generation().set(DataGenerationOption::from(ev.target().value().as_str()));
                             }
                             prop:value=move || dopts.generation().get().to_string()
@@ -376,6 +445,7 @@ fn Control(
                         <button
                             style="width:33%"
                             on:click=move |_| {
+                                running_w.set(false);
                                 values_w.set(gen_values(
                                         &mut rng.write_untracked(),
                                         dopts.generation().get(),
@@ -449,20 +519,19 @@ fn Content(
 
     let bars = move || {
         let history = history_r.read();
-        let bars = history.last().unwrap().list();
+        let Some(last) = history.last() else { return vec![] };
+        let values = last.list().iter().copied();
 
-        let min = bars.iter().copied().min().unwrap();
-        let max = bars.iter().copied().max().unwrap();
+        let min = values.clone().min().unwrap();
+        let max = values.clone().max().unwrap();
 
-        bars
-            .iter()
-            .copied()
+        values
             .map(|v| (v - min) * 100 / (max - min))
             .enumerate()
             .collect::<Vec<_>>()
     };
-    let bars_len = move || history_r.read().last().unwrap().list().len();
-    let were_bars_swapped = move |i| match history_r.read().last().unwrap().swapped() {
+    let bars_len = move || history_r.read().last().map(|v| v.list().len()).unwrap_or(0);
+    let were_bars_swapped = move |i| match history_r.read().last().map(|v| v.swapped()).unwrap_or(None) {
         Some((a, b)) if i == a || i == b => true,
         _ => false,
     };
@@ -508,6 +577,7 @@ fn Content(
                 let angle = std::f64::consts::PI / 4.;
                 let x = px + place as f64 * (w + 1.);
                 let y = py + value        * (w + 1.);
+                let y = canv_h - y;
                 context.set_line_width(w);
                 context.begin_path();
                 context.move_to(x, y);
@@ -547,7 +617,7 @@ fn Content(
             </div>
         </Show>
         <Show when=move || vopts.values().get() >
-            {move || history_r.read().last().unwrap().into_view()}
+            {move || history_r.read().last().map(|v| v.into_view())}
         </Show>
         <Show when=move || vopts.values().get() && vopts.history().get() >
             <For
@@ -761,6 +831,7 @@ fn App() -> impl IntoView {
                     sorter_w=sorter_w
                     dopts=dopts
                     vopts=vopts
+                    values_r=values_r
                     values_w=values_w
                     recorder=recorder
                 />

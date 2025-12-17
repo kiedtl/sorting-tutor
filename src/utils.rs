@@ -105,13 +105,11 @@ impl RecorderState {
     }
 
     pub fn lt(&mut self, a: usize, b: usize) -> bool {
-        //self.comparisons.fetch_add(1, Ordering::Relaxed);
         self.comparisons += 1;
         a < b
     }
 
     pub fn gt(&mut self, a: usize, b: usize) -> bool {
-        //self.comparisons.fetch_add(1, Ordering::Relaxed);
         self.comparisons += 1;
         a > b
     }
@@ -179,14 +177,14 @@ pub struct Snapshot {
 }
 
 impl Snapshot {
-    pub fn new(inner: Box<dyn IsSnapshot>) -> Self {
+    pub fn new(inner: Box<dyn IsSnapshot>, fleeting: bool) -> Self {
         let mut hasher = DefaultHasher::new();
         inner.list().hash(&mut hasher);
         let hash = hasher.finish();
 
         Snapshot {
             inner,
-            is_important: true,
+            is_important: !fleeting,
             hash,
         }
     }
@@ -221,13 +219,13 @@ impl From<&[usize]> for Snapshot {
     fn from(f: &[usize]) -> Snapshot {
         // A Box inside a Box made from a borrowed Box. Incredibly wasteful.
         // Snapshot should just be an enum.
-        Snapshot::new(Box::new(VList::new(f)))
+        Snapshot::new(Box::new(VList::new(f)), false)
     }
 }
 
 impl From<&Box<[usize]>> for Snapshot {
     fn from(f: &Box<[usize]>) -> Snapshot {
-        Snapshot::new(Box::new(VList::new(&f)))
+        Snapshot::new(Box::new(VList::new(&f)), false)
     }
 }
 
@@ -236,8 +234,13 @@ pub trait IsSnapshot: Send + Sync {
     fn list(&self) -> &[usize];
     fn into_view(&self) -> AnyView;
 
-    fn into_vew(self) -> Snapshot where Self: Sized + 'static {
-        Snapshot::from(self)
+    fn is_fleeting(&self) -> bool {
+        false
+    }
+
+    fn into_snapshot(self) -> Snapshot where Self: Sized + 'static {
+        let v = self.is_fleeting();
+        Snapshot::new(Box::new(self), v)
     }
 }
 
@@ -246,7 +249,8 @@ where
     T: IsSnapshot + 'static,
 {
     fn from(value: T) -> Snapshot {
-        Snapshot::new(Box::new(value))
+        let v = value.is_fleeting();
+        Snapshot::new(Box::new(value), v)
     }
 }
 
@@ -564,7 +568,9 @@ pub struct VQuick {
     list: Box<[usize]>,
     layers: Vec<VQuickLayer>,
     swapped: Option<(usize, usize)>,
+    current: Option<usize>,
     expl: String,
+    fleeting: bool,
 }
 
 impl VQuick {
@@ -573,12 +579,24 @@ impl VQuick {
             list,
             layers: Vec::new(),
             swapped,
+            current: None,
             expl: expl.into(),
+            fleeting: false,
         }
     }
 
     pub fn layer(mut self, r: Range<usize>, p: Option<usize>) -> Self {
         self.layers.push(VQuickLayer { r, p });
+        self
+    }
+
+    pub fn set_fleeting(mut self, value: bool) -> Self {
+        self.fleeting = value;
+        self
+    }
+
+    pub fn current(mut self, current: Option<usize>) -> Self {
+        self.current = current;
         self
     }
 }
@@ -592,8 +610,13 @@ impl IsSnapshot for VQuick {
         &self.list
     }
 
+    fn is_fleeting(&self) -> bool {
+        self.fleeting
+    }
+
     fn into_view(&self) -> AnyView {
         let swapped = self.swapped; // captured by closure
+        let current = self.current; // captured by closure
         let expl = self.expl.clone(); // captured by closure
 
         let list = self.list.clone();
@@ -603,6 +626,7 @@ impl IsSnapshot for VQuick {
             <div class="group">
                 {move || {
                     let mut swapped = swapped;
+                    let mut current = current;
                     let mut expl = (!expl.is_empty()).then(|| expl.clone());
                     layers.iter().map(|l| {
                         view! {
@@ -616,7 +640,9 @@ impl IsSnapshot for VQuick {
                                     swapped.take(),
 
                                     l.p.map(|p| p - l.r.start),
-                                    None,
+
+                                    // Show current element only for first layer.
+                                    current.take(),
                                 )}
                             </div>
                             <div class="enclosure">
