@@ -282,6 +282,18 @@ td.elem.pad::before {
   display: inline-block;
 }
 
+.elem.cur {
+  position: relative;
+}
+
+.elem.cur::before {
+  content: '▲';
+  position: absolute;
+  top: calc(50% + 1px);
+  translate: 50% 0;
+  color: red;
+}
+
 .elem.swp {
   color: #fff;
   background: #2f4f8f;
@@ -303,18 +315,21 @@ td.elem.pad::before {
   width: 1.3rem;
   height: 1.3rem;
   font-size: 0.7rem;
+  line-height: 1.2rem;
 }
 
 .z2 {
   width: 1.2rem;
   height: 1.2rem;
   font-size: 0.6rem;
+  line-height: 1.1rem;
 }
 
 .z3 {
   width: 1.1rem;
   height: 1.1rem;
   font-size: 0.5rem;
+  line-height: 1.0rem;
 }
 
 .z4 {
@@ -322,6 +337,7 @@ td.elem.pad::before {
   height: 0.6rem;
   font-size: 0.3rem;
   border: none !important;
+  line-height: 0.5rem;
 }
 
 .z5 {
@@ -329,6 +345,7 @@ td.elem.pad::before {
   height: 0.4rem;
   font-size: 0.1rem;
   border: none !important;
+  line-height: 0.5rem;
 }
 /* ))) */
 
@@ -857,7 +874,6 @@ img.badge {
   image-rendering: -moz-crisp-edges;
   image-rendering: -webkit-optimize-contrast;
   width: auto;
-  /* Badges are 20px but somehow this removes weird distortion */
   height: 19px;
   min-height: 19px;
   max-height: 19px;

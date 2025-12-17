@@ -232,7 +232,7 @@ fn Control(
 ) -> impl IntoView
 {
     let (running_r, running_w) = signal(false);
-    let (delay_r, delay_w) = signal(60);
+    let (delay_r, delay_w) = signal(64);
 
     view! {
         <div class="card">
@@ -309,10 +309,10 @@ fn Control(
                     </td>
                     <td>
                         <input
-                            type="range" id="delay" name="Delay" min="0" max="256"
-                            value=move || delay_r.get()
+                            type="range" id="delay" name="Delay" min="0" max="64"
+                            value=move || delay_r.get() / 8
                             on:input:target=move |ev| {
-                                delay_w.set(ev.target().value().parse().unwrap());
+                                delay_w.set(ev.target().value().parse::<usize>().unwrap() * 8);
                             }
                         />
                     </td>
@@ -426,6 +426,11 @@ fn Control(
             <p>
                 <span class="fake elem swp spc">"Glue"</span>
                 "Recently swapped special items"
+            </p>
+            <hr class="fsep" />
+            <p>
+                <span class="fake elem cur">"Arrow"</span>
+                "\"Current\" item"
             </p>
         </div>
     }
@@ -731,8 +736,6 @@ fn App() -> impl IntoView {
                         recorder,
                     )
             ));
-
-            run_once(sorter_w, history_w);
         } else {
             let last = Box::from(
                 history_r.read_untracked()

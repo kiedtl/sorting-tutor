@@ -203,14 +203,15 @@ pub fn selection(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew
 
             let mut min = i;
             for j in (i + 1)..x.len() {
-                if x[j] < x[min] {
+                if r.lt(x[j], x[min]) {
                     min = j;
-                    yield VList::new(&x)
-                        .swapped(i, min)
-                        .special(min)
-                        .into_vew()
-                        .fleeting();
                 }
+
+                yield VList::new(&x)
+                    .current(j)
+                    .special(min)
+                    .into_vew()
+                    .fleeting();
             }
 
             r.swap(&mut x, i, min);
@@ -254,10 +255,16 @@ pub fn heap(mut x: List, r: Recorder) -> impl Coroutine<(), Yield = Vew, Return 
 
         for i in (1..h.nodes()).rev() {
             h.swap(heap::Node::of(0, &h), heap::Node::of(i, &h), r);
-            yield VHeap::new(&h, Some((0, i))).into();
+            yield VHeap::new(&h, Some((0, i)))
+                .now_heapifying(0)
+                .expl("Moving root to end of heap")
+                .expl(format!("Next: sift heap at {}", h.root().value(&h)))
+                .into();
 
             h.abandon(1);
-            for_coro!(y in heapify(h.root(), &mut h, r) => yield y);
+            for_coro!(y in heapify(h.root(), &mut h, r) =>
+                yield y.expl("Sifting heap").into()
+            );
         }
     }
 }
@@ -268,7 +275,9 @@ fn build_heap(heap: &mut heap::Heap<'_>, r: Recorder) -> impl Coroutine<(), Yiel
         let k = heap.nodes() / 2;
         for i in (0..k).rev() {
             let n = heap::Node::of(i, heap);
-            for_coro!(y in heapify(n, heap, r) => yield y);
+            for_coro!(y in heapify(n, heap, r) =>
+                yield y.expl("Building heap").into()
+            );
         }
     }
 }
@@ -278,7 +287,7 @@ fn heapify(
     node: heap::Node,
     heap: &mut heap::Heap<'_>,
     mut r: Recorder,
-) -> impl Coroutine<(), Yield = Vew, Return = ()>
+) -> impl Coroutine<(), Yield = VHeap, Return = ()>
 {
     #[coroutine] static move || {
         let _g = r.f("heapify");
@@ -295,7 +304,11 @@ fn heapify(
             heap.swap(node, max, r);
             yield VHeap::new(&heap, Some((node.index, max.index)))
                 .now_heapifying(max.index)
-                .into();
+                .expl(format!(
+                        "Swapped because {} > {}",
+                        node.value(heap), max.value(heap)
+                ))
+                .expl(format!("Next: sift heap at {}", max.value(heap)));
             for_coro!(y in heapify(max, heap, r) => yield y);
         }
     }

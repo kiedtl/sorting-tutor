@@ -16,7 +16,7 @@ code, and CC-BY-NC-ND for static content).
 	<img class="inline badge" src='//tilde.team/~kiedtl/images/badges/source/github-dark.png' />
 </a>
 
-<a target="_blank" href='https://github.com/kiedtl/badges'>
+<a target="_blank" href='https://512kb.club/#512'>
 	<img class="inline badge" src='//tilde.team/~kiedtl/images/badges/club/512kb-club.png' />
 </a>
 

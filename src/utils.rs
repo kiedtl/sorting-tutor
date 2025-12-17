@@ -1,4 +1,5 @@
 use leptos::prelude::*;
+use leptos::html;
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -255,6 +256,7 @@ fn list_into_view(
     s: &[usize],
     swapped: Option<(usize, usize)>,
     special: Option<usize>, // Pivot for quicksort
+    current: Option<usize>,
 )
     -> impl IntoView + use<>
 {
@@ -280,13 +282,10 @@ fn list_into_view(
                 _ => "",
             };
 
-            let special = if Some(i) == special {
-                " spc"
-            } else {
-                ""
-            };
+            let special = if Some(i) == special { " spc" } else { "" };
+            let current = if Some(i) == current { " cur" } else { "" };
 
-            let class = format!("elem{swp}{special}{elem_width_class}");
+            let class = format!("elem{swp}{special}{current}{elem_width_class}");
 
             view! {
                 <div class=class>{v}</div>
@@ -305,6 +304,7 @@ pub struct VList {
     list: Box<[usize]>,
     swapped: Option<(usize, usize)>,
     special: Option<usize>,
+    current: Option<usize>,
     expl: Option<String>,
 }
 
@@ -314,6 +314,7 @@ impl VList {
             list: Box::from(x),
             swapped: None,
             special: None,
+            current: None,
             expl: None,
         }
     }
@@ -325,6 +326,11 @@ impl VList {
 
     pub fn special(mut self, spc: usize) -> Self {
         self.special = Some(spc);
+        self
+    }
+
+    pub fn current(mut self, spc: usize) -> Self {
+        self.current = Some(spc);
         self
     }
 
@@ -347,7 +353,7 @@ impl IsVew for VList {
         view! {
             <div class="solo-group">
                 <div class="enclosure">
-                    {list_into_view(0, 0, &self.list, self.swapped, self.special)}
+                    {list_into_view(0, 0, &self.list, self.swapped, self.special, self.current)}
                 </div>
             </div>
         }.into_any()
@@ -359,6 +365,7 @@ pub struct VHeap {
     n: usize,
     swapped: Option<(usize, usize)>,
     heapifying: Option<usize>,
+    expl: Vec<String>,
 }
 
 impl VHeap {
@@ -368,7 +375,13 @@ impl VHeap {
             n: heap.nodes(),
             swapped,
             heapifying: None,
+            expl: Vec::new(),
         }
+    }
+
+    pub fn expl(mut self, s: impl Into<String>) -> Self {
+        self.expl.push(s.into());
+        self
     }
 
     pub fn now_heapifying(mut self, i: usize) -> Self {
@@ -391,9 +404,10 @@ impl IsVew for VHeap {
         let heapifying = self.heapifying; // for closure
         let heap_repr = self.heap.clone(); // for closure
         let heap_len = self.heap.len(); // for closure
+        let expl = self.expl.clone(); // captured by closure
         let actual_heap_len = self.n;
 
-        let listview = list_into_view(0, 0, &self.heap, swapped, None).into_any();
+        let listview = list_into_view(0, 0, &self.heap, swapped, None, None).into_any();
 
         let font_size = "0.75em";
         let bw = 20;
@@ -443,13 +457,13 @@ impl IsVew for VHeap {
                           <linearGradient id="abandoned" gradientTransform="rotate(90)">
                             <stop offset="50%" stop-color="#ffefbf" />
                             <stop offset="70%" stop-color="#ffee99" />
-                            <stop offset="95%" stop-color="#ffd060" />
+                            <stop offset="99%" stop-color="#ffd060" />
                           </linearGradient>
-                          <linearGradient id="swappejd" gradientTransform="rotate(90)">
-                            <stop offset="50%" stop-color="#bfefff" />
-                            <stop offset="70%" stop-color="#99eeff" />
-                            <stop offset="95%" stop-color="#60d0ff" />
-                          </linearGradient>
+                          // <linearGradient id="swapped" gradientTransform="rotate(90)">
+                          //   <stop offset="50%" stop-color="#bfefff" />
+                          //   <stop offset="70%" stop-color="#99eeff" />
+                          //   <stop offset="95%" stop-color="#60d0ff" />
+                          // </linearGradient>
                           <linearGradient id="swapped">
                             <stop offset="100%" stop-color="#2f4f8f" />
                           </linearGradient>
@@ -526,6 +540,15 @@ impl IsVew for VHeap {
                         }
                     </svg>
                 </div>
+                // <div class="enclosure">
+                    {expl
+                        .into_iter()
+                        .map(|expl|
+                            html::p().class("expl").child(expl)
+                        )
+                        .collect_view()
+                    }
+                // </div>
             </div>
         }.into_any()
     }
@@ -593,6 +616,7 @@ impl IsVew for VQuick {
                                     swapped.take(),
 
                                     l.p.map(|p| p - l.r.start),
+                                    None,
                                 )}
                             </div>
                             <div class="enclosure">
