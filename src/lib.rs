@@ -8,7 +8,7 @@
 mod utils;
 mod sorter;
 
-use crate::utils::{Vew, IsVew, Coro};
+use crate::utils::{Snapshot, IsSnapshot, Coro};
 use crate::sorter::{Recorder, Algorithm, ALGORITHMS, List};
 
 use std::pin::Pin;
@@ -68,8 +68,8 @@ fn gen_values(
 }
 
 fn run_once(
-    sorter_w: WriteSignal<Coro<Vew>, LocalStorage>,
-    history_w: WriteSignal<Vec<Vew>>,
+    sorter_w: WriteSignal<Coro<Snapshot>, LocalStorage>,
+    history_w: WriteSignal<Vec<Snapshot>>,
 ) {
     match sorter_w.write().next() {
         Some(view) => history_w.write().push(view),
@@ -223,9 +223,9 @@ fn Control(
     vopts: Store<VisualOptions>,
     algo_r: ReadSignal<Algorithm>,
     algo_w: WriteSignal<Algorithm>,
-    history_r: ReadSignal<Vec<Vew>>,
-    history_w: WriteSignal<Vec<Vew>>,
-    sorter_w: WriteSignal<Coro<Vew>, LocalStorage>,
+    history_r: ReadSignal<Vec<Snapshot>>,
+    history_w: WriteSignal<Vec<Snapshot>>,
+    sorter_w: WriteSignal<Coro<Snapshot>, LocalStorage>,
     values_w: WriteSignal<Box<[usize]>>,
     dopts: Store<DataOptions>,
     recorder: Recorder,
@@ -440,7 +440,7 @@ fn Control(
 fn Content(
     dopts: Store<DataOptions>,
     vopts: Store<VisualOptions>,
-    history_r: ReadSignal<Vec<Vew>>,
+    history_r: ReadSignal<Vec<Snapshot>>,
 ) -> impl IntoView
 {
     // let bars = move || history_r.read().last().map(|v| v.list().len()).unwrap_or(0);
@@ -696,7 +696,7 @@ fn App() -> impl IntoView {
     // as well(??)
     let (algo_r, algo_w) = signal(ALGORITHMS[0]);
 
-    let (history_r, history_w) = signal(vec![Vew::from(&*values_r.read_untracked())]);
+    let (history_r, history_w) = signal(vec![Snapshot::from(&*values_r.read_untracked())]);
     let (sorter_r, sorter_w) = signal_local(Coro::new(
             algo_r.get_untracked().func()(
                 values_r.get_untracked(),

@@ -172,19 +172,19 @@ pub fn size_class(item_len: usize) -> &'static str {
 // A "snapshot" of progress of a sorting algorithm, at the very least containing
 // the partially sorted list and possibly also annotations, tree structures, etc.
 // Not to be confused with Leptos' View/IntoView stuff.
-pub struct Vew {
-    inner: Box<dyn IsVew>,
+pub struct Snapshot {
+    inner: Box<dyn IsSnapshot>,
     is_important: bool,
     hash: u64,
 }
 
-impl Vew {
-    pub fn new(inner: Box<dyn IsVew>) -> Self {
+impl Snapshot {
+    pub fn new(inner: Box<dyn IsSnapshot>) -> Self {
         let mut hasher = DefaultHasher::new();
         inner.list().hash(&mut hasher);
         let hash = hasher.finish();
 
-        Vew {
+        Snapshot {
             inner,
             is_important: true,
             hash,
@@ -217,36 +217,36 @@ impl Vew {
     }
 }
 
-impl From<&[usize]> for Vew {
-    fn from(f: &[usize]) -> Vew {
+impl From<&[usize]> for Snapshot {
+    fn from(f: &[usize]) -> Snapshot {
         // A Box inside a Box made from a borrowed Box. Incredibly wasteful.
-        // Vew should just be an enum.
-        Vew::new(Box::new(VList::new(f)))
+        // Snapshot should just be an enum.
+        Snapshot::new(Box::new(VList::new(f)))
     }
 }
 
-impl From<&Box<[usize]>> for Vew {
-    fn from(f: &Box<[usize]>) -> Vew {
-        Vew::new(Box::new(VList::new(&f)))
+impl From<&Box<[usize]>> for Snapshot {
+    fn from(f: &Box<[usize]>) -> Snapshot {
+        Snapshot::new(Box::new(VList::new(&f)))
     }
 }
 
-pub trait IsVew: Send + Sync {
+pub trait IsSnapshot: Send + Sync {
     fn swapped(&self) -> Option<(usize, usize)>;
     fn list(&self) -> &[usize];
     fn into_view(&self) -> AnyView;
 
-    fn into_vew(self) -> Vew where Self: Sized + 'static {
-        Vew::from(self)
+    fn into_vew(self) -> Snapshot where Self: Sized + 'static {
+        Snapshot::from(self)
     }
 }
 
-impl<T> From<T> for Vew
+impl<T> From<T> for Snapshot
 where
-    T: IsVew + 'static,
+    T: IsSnapshot + 'static,
 {
-    fn from(value: T) -> Vew {
-        Vew::new(Box::new(value))
+    fn from(value: T) -> Snapshot {
+        Snapshot::new(Box::new(value))
     }
 }
 
@@ -340,7 +340,7 @@ impl VList {
     }
 }
 
-impl IsVew for VList {
+impl IsSnapshot for VList {
     fn swapped(&self) -> Option<(usize, usize)> {
         self.swapped
     }
@@ -390,7 +390,7 @@ impl VHeap {
     }
 }
 
-impl IsVew for VHeap {
+impl IsSnapshot for VHeap {
     fn swapped(&self) -> Option<(usize, usize)> {
         self.swapped
     }
@@ -583,7 +583,7 @@ impl VQuick {
     }
 }
 
-impl IsVew for VQuick {
+impl IsSnapshot for VQuick {
     fn swapped(&self) -> Option<(usize, usize)> {
         self.swapped
     }

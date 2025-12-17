@@ -5,7 +5,7 @@ use crate::utils::{
     //O, Perf,
     RecorderState,
     Coro,
-    IsVew, Vew, VList, VHeap, VQuick
+    IsSnapshot, Snapshot, VList, VHeap, VQuick
 };
 
 use leptos::prelude::{Write, WriteSignal, Read, ReadSignal, Set, signal};
@@ -14,7 +14,7 @@ use std::pin::Pin;
 use std::ops::{CoroutineState, Coroutine};
 
 pub type List = Box<[usize]>;
-pub type SortingCoro = Pin<Box<dyn Coroutine<(), Yield = Vew, Return = ()>>>;
+pub type SortingCoro = Pin<Box<dyn Coroutine<(), Yield = Snapshot, Return = ()>>>;
 
 pub struct RecorderCallGuard<'a> {
     name: &'static str,
@@ -163,7 +163,7 @@ impl std::fmt::Display for Algorithm {
 //     }
 // }
 
-pub fn bubble(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
+pub fn bubble(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Snapshot, Return = ()> {
     #[coroutine] static move || {
         let _g = r.f("bubble");
         yield VList::new(&x).into();
@@ -191,7 +191,7 @@ pub fn bubble(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew, R
     }
 }
 
-pub fn selection(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
+pub fn selection(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Snapshot, Return = ()> {
     #[coroutine] static move || {
         let _g = r.f("selection");
         yield VList::new(&x).into();
@@ -223,7 +223,7 @@ pub fn selection(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew
     }
 }
 
-pub fn insertion(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
+pub fn insertion(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Snapshot, Return = ()> {
     #[coroutine] static move || {
         let _g = r.f("insertion");
         yield VList::new(&x).into();
@@ -243,7 +243,7 @@ pub fn insertion(mut x: List, mut r: Recorder) -> impl Coroutine<(), Yield = Vew
     }
 }
 
-pub fn heap(mut x: List, r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
+pub fn heap(mut x: List, r: Recorder) -> impl Coroutine<(), Yield = Snapshot, Return = ()> {
     #[coroutine] static move || {
         let _g = r.f("heapsort");
         let mut h = heap::Heap::new(&mut x);
@@ -269,7 +269,7 @@ pub fn heap(mut x: List, r: Recorder) -> impl Coroutine<(), Yield = Vew, Return 
     }
 }
 
-fn build_heap(heap: &mut heap::Heap<'_>, r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
+fn build_heap(heap: &mut heap::Heap<'_>, r: Recorder) -> impl Coroutine<(), Yield = Snapshot, Return = ()> {
     #[coroutine] static move || {
         let _g = r.f("build_heap");
         let k = heap.nodes() / 2;
@@ -314,7 +314,7 @@ fn heapify(
     }
 }
 
-pub fn quicksort(mut x: List, r: Recorder) -> impl Coroutine<(), Yield = Vew, Return = ()> {
+pub fn quicksort(mut x: List, r: Recorder) -> impl Coroutine<(), Yield = Snapshot, Return = ()> {
     #[coroutine] static move || {
         let l = x.len();
         yield VQuick::new(x.clone(), None, "").layer(0..x.len(), None).into();
