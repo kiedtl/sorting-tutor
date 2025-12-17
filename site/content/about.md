@@ -31,6 +31,26 @@ code, and CC-BY-NC-ND for static content).
 
 This site is a work in progress. All comments, suggestions, bikeshedding, and related hatemail (`kiedtl at <current website> dot team`) are appreciated.
 
+### Roadmap
+
+A rough list of new features that will eventually be added (*contributions
+welcome*).
+
+1. Common/basic sorting algorithms.
+   - Mergesort
+   - Shellsort
+   - Counting, bucket, radix sort
+3. Ability to set algorithm-specific options.
+   - ex. Pivot heuristic for Quicksort (Lomuto, median-of-three, median-of-nine,
+     random)
+4. More sorting algorithms, especially ones used in the standard libraries of
+   various programming languages.
+   - Timsort
+   - Powersort
+   - Driftsort
+2. Metrics on memory usage, i.e. space complexity.
+3. More kinds of visualization.
+
 ### Architecture
 
 This project uses the unstable `Coroutines` Rust feature — which, if you're not
@@ -107,12 +127,13 @@ how `async` functions are desugared into `Future`s.
 
 ### Prior Art
 
-Sorting Tutor takes inspiration from other visualizers:
+Sorting Tutor takes inspiration from two other algorithm visualizers:
 
 - [The Sound of Sorting](https://mszula.github.io/visual-sorting/)
 - [VisuAlgo](https://visualgo.net/en/sorting)
 
-Others exist, but the above were the main inspirations.
+I'm aware there are around four billion more, but the above were the main
+inspirations.
 
 This project was created with a more pedagogical focus, in the hopes of helping
 one grok the details of how an algorithm works in addition to getting an
