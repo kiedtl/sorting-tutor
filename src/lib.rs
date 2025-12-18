@@ -345,7 +345,7 @@ fn Control(
                                         .iter()
                                         .copied()
                                         .find(|al| al.to_string() == v)
-                                        .unwrap_or(Algorithm::Insertion)
+                                        .unwrap_or(Algorithm::default())
                                 );
                             }
                             prop:value=move || algo_r.get().to_string()
@@ -764,7 +764,7 @@ fn App() -> impl IntoView {
 
     // Need to choose the first, because the <select> element apparently chooses the first option
     // as well(??)
-    let (algo_r, algo_w) = signal(ALGORITHMS[0]);
+    let (algo_r, algo_w) = signal(Algorithm::default());
 
     let (history_r, history_w) = signal(vec![Snapshot::from(&*values_r.read_untracked())]);
     let (sorter_r, sorter_w) = signal_local(Coro::new(

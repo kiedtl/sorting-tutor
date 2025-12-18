@@ -80,20 +80,20 @@ impl Recorder {
 
 pub const ALGORITHMS: &[Algorithm] = &[
     // First is default
+    Algorithm::Heap,
     Algorithm::Insertion,
-
     Algorithm::Quick,
     Algorithm::Selection,
     Algorithm::Bubble,
-    Algorithm::Heap,
 ];
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 pub enum Algorithm {
     Bubble,
     Selection,
     Insertion,
     Quick,
+    #[default]
     Heap,
     //Stalin,
     //Merge,
