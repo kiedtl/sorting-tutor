@@ -1,9 +1,9 @@
-<!-- vim: set ft=html foldmethod=marker foldmarker=(((,))) : -->
-<!-- (haha, just realized this is going to make it into the finished html.. the joys of writing Zola templates) -->
+{# vim: set ft=html foldmethod=marker foldmarker=(((,))) : #}
 
 <!DOCTYPE html>
 <html lang="en-us">
 	<head>
+		<!-- <base href="/" /> -->
 		<base href="//tilde.team/~kiedtl/sorting/" />
 		<meta name="viewport" content="width=device-width,initial-scale=1" />
 		<meta http-equiv="content-type" content="text/html; charset=utf-8">
@@ -44,7 +44,7 @@
   --acc-4: #4f7f5f;
   --acc-9: #9fcfaf;
   --acc-b: #bfefcf;
-  
+
   --hih-4: #2f2501;
   --hih-6: #6f6521;
   --hih-8: #8f8541;
@@ -54,6 +54,8 @@
   --gold-a: #af8010;
   --gold-c: #cfa030;
   --gold-f: #ffd060;
+
+  --nav-indicator-width: 1rem;
 }
 
 html {
@@ -93,6 +95,7 @@ body {
   width: var(--w);
   max-width: var(--w);
   min-width: var(--w);
+  display: flex;
 }
 
 /* NOTE: footer is inside static-content */
@@ -100,39 +103,6 @@ main#static-content, #header, #sep {
   width: 80%;
   min-width: 19rem;
   max-width: 50rem;
-}
-
-@media screen and (max-width: 60rem) {
-  main#static-content, #header, #sep, #content {
-    width: 90%;
-  }
-
-  #wasm {
-    flex-direction: column;
-  }
-
-  #left, #right {
-    overflow: wrap;
-  }
-
-  #content {
-    min-height: unset !important;
-    overflow: scroll;
-    align-self: center;
-    order: 1;
-  }
-
-  #left {
-    order: 2;
-    width: 60%;
-    align-self: center;
-  }
-
-  #right {
-    order: 3;
-    width: 60%;
-    align-self: center;
-  }
 }
 /* ))) */
 
@@ -408,7 +378,6 @@ p.expl {
 label {
   color: #343;
   font-weight: 600;
-  font-family: serif;
   margin-right: 0.5rem;
 }
 
@@ -456,7 +425,7 @@ a.nav {
   text-decoration: none;
   margin-bottom: 0.35em;
   box-shadow: 3px 3px #8e8b89;
-  width: 5rem;
+  width: calc(3rem + 2 * var(--nav-indicator-width)) !important;
   text-align: center;
   position: relative;
 }
@@ -467,7 +436,7 @@ a.sel.nav:before {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 1rem;
+  width: var(--nav-indicator-width);
   height: calc(100% - 4px);
   display: inline-block;
 }
@@ -478,7 +447,7 @@ a.sel.nav:after {
   position: absolute;
   top: 2px;
   right: 2px;
-  width: 1rem;
+  width: var(--nav-indicator-width);
   height: calc(100% - 4px);
   display: inline-block;
 }
@@ -498,6 +467,7 @@ button {
   background: #9fcfaf;
   box-shadow: 3px 3px var(--acc-2);
   margin: calc(0.2em - 3px) 0.2em 0.2em 0.2em;
+  color: #000;
 }
 
 button:hover {
@@ -624,11 +594,11 @@ select:open {
 }
 
 [type="range"]::-webkit-slider-thumb {
-  margin-top: -0.625em;
+  margin-top: -0.3em;
   box-sizing: border-box;
   height: 1rem;
   width: 0.8rem;
-  background: var(--acc-b);
+  background: var(--acc-4);
   border: 1px solid var(--acc-2);
   box-shadow: inset 1px 1px var(--acc-2);
   border-radius: 3px;
@@ -658,7 +628,7 @@ button {
 select,
 button,
 [type=range]::-webkit-slider-thumb,
-[type=range]::-moz-range-thumb 
+[type=range]::-moz-range-thumb
 {
   border-radius: 2px;
 }
@@ -904,6 +874,7 @@ img.badge {
 }
 
 #static-content table {
+  table-layout: fixed;
   border-collapse: collapse;
   width: 100%;
 }
@@ -919,6 +890,123 @@ label.strike {
 .mini {
   font-size: 0.8rem;
 }
+
+#mobile-warning {
+  display: none;
+}
+
+@media screen and (max-width: 60rem) {/* ((( -*/
+  * {
+    --nav-indicator-width: 0.3rem;
+  }
+
+  h1 {
+    font-size: 1.15rem;
+  }
+
+  main#static-content, #header, #sep, #content {
+    width: 95%;
+  }
+
+  #wasm {
+    flex-direction: column;
+  }
+
+  #left, #right {
+    overflow: wrap;
+  }
+
+  #content {
+    min-height: unset;
+    align-self: center;
+    order: 2;
+  }
+
+  #left {
+    order: 1;
+    width: 80%;
+    max-width: 25rem;
+    align-self: center;
+  }
+
+  #right {
+    order: 3;
+    width: 80%;
+    max-width: 22rem;
+    align-self: center;
+  }
+
+  /* Touch-friendly controls */
+  button, select, [type="checkbox"] {
+    height: 2.0rem;
+    padding-left: 1em;
+    padding-right: 1em;
+  }
+
+  [type="checkbox"] {
+    width: 2.0rem;
+    height: 2.0rem;
+  }
+
+  a.nav {
+    width: calc(1.8rem + 2 * var(--nav-indicator-width));
+    font-size: 0.8rem important;
+  }
+
+  #static-content table {
+    max-width: 100%;
+    display: block;
+    overflow-x: auto;
+  }
+
+  #static-content table td,
+  #static-content table th
+  {
+    font-size: 0.8rem;
+  }
+
+  [type="range"] {
+    height: 1.5rem;
+  }
+
+  [type="range"],
+  [type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+  }
+
+  [type="range"]::-webkit-slider-runnable-track {
+    box-shadow: inset 2px 2px var(--acc-2);
+    height: 1em;
+  }
+
+  [type="range"]::-moz-range-progress {
+    box-shadow: inset 2px 2px var(--acc-2);
+    height: 1em;
+  }
+
+  [type="range"]::-moz-range-track {
+    box-shadow: inset 2px 2px var(--acc-2);
+    height: 1em;
+  }
+
+  [type="range"]::-webkit-slider-thumb {
+    height: 1.5rem;
+    width: 1.6rem;
+    box-shadow: inset 2px 2px var(--acc-2);
+  }
+
+  [type="range"]::-moz-range-thumb {
+    height: 1.5rem;
+    width: 1.6rem;
+    box-shadow: inset 2px 2px var(--acc-2);
+  }
+}/* ))) */
+
+@media screen and (max-width: 35rem) {
+  #mobile-warning {
+    display: block;
+  }
+}
 		</style>
 	</head>
 	<body>
@@ -926,11 +1014,12 @@ label.strike {
 			<h1><a href="">Sorting Tutor</a></h1>
 			<nav>
 				{% for page in config.extra.navbar %}
+					{% set page_path = "/" ~ page.path %}
 					<a
-						class="nav{% if current_path == page.path %} sel{% endif %}"
+						class="nav{% if current_path == page_path %} sel{% endif %}"
 						href="{{ page.path | safe }}"
 					>
-						{{ page.title }}
+					{{ page.title }}
 					</a>
 				{% endfor %}
 			</nav>

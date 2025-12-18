@@ -17,4 +17,3 @@ release:
 publish:
 	ssh team 'rm -rf ~/src/sorting-tutor/dist'
 	scp -r dist team:~kiedtl/src/sorting-tutor/dist
-	ssh team 'zola -r pub/html/src build'

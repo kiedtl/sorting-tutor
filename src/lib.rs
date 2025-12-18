@@ -821,6 +821,12 @@ fn App() -> impl IntoView {
 
     view! {
         <main id="wasm">
+            // <noscript>
+            //     <p>"Unfortunately, this page requires JavaScript."</p>
+            // </noscript>
+            <div id="mobile-warning">
+                <p>"This site is best viewed on a larger screen."</p>
+            </div>
             <div id="left">
                 <Control
                     rng=rng
