@@ -31,6 +31,27 @@ code, and CC-BY-NC-ND for static content).
 
 This site is a work in progress. All comments, suggestions, bikeshedding, and related hatemail (`kiedtl at <current website> dot team`) are appreciated.
 
+### Prior Art
+
+Sorting Tutor takes inspiration from two other algorithm visualizers:
+
+- [The Sound of Sorting](https://mszula.github.io/visual-sorting/)
+- [VisuAlgo](https://visualgo.net/en/sorting)
+
+I'm aware there are around four billion more, but the above were the main
+inspirations. However, two key differentiators hopefully set this website apart:
+1. A more pedagogical focus, to help one grok the details of how an algorithm
+   works (in addition to getting an intuitive understanding of how elements are
+   shuffled around and reordered). Thus the focus on showing the internal state
+   of the sorting algorithm, along with short one-line explainers.
+2. Access to performance metrics.
+
+{% sidenote() %}
+If you're using this site in a course you teach, I'd be happy to know — that's
+what this project was for in the first place, and knowing that it's in use can
+be encouraging. Feature requests are welcome as well.
+{% end %}
+
 ### Roadmap
 
 A rough list of new features that will eventually be added (*contributions
@@ -124,19 +145,3 @@ Internally, the Rust compiler takes our coroutine and does the hard work of
 desugaring it into a state machine that implements this interface — similar to
 how `async` functions are desugared into `Future`s.
 {% end %}
-
-### Prior Art
-
-Sorting Tutor takes inspiration from two other algorithm visualizers:
-
-- [The Sound of Sorting](https://mszula.github.io/visual-sorting/)
-- [VisuAlgo](https://visualgo.net/en/sorting)
-
-I'm aware there are around four billion more, but the above were the main
-inspirations.
-
-This project was created with a more pedagogical focus, in the hopes of helping
-one grok the details of how an algorithm works in addition to getting an
-intuitive understanding of how elements are shuffled around and sorted.
-
-Performance metrics are another key feature.
