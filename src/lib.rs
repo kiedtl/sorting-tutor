@@ -5,11 +5,13 @@
 #![feature(coroutine_trait)]
 #![feature(gen_blocks)]
 
-mod utils;
+mod recorder;
 mod sorter;
+mod utils;
 
+use crate::recorder::Recorder;
+use crate::sorter::{Algorithm, ALGORITHMS, List};
 use crate::utils::{Snapshot, IsSnapshot, Coro};
-use crate::sorter::{Recorder, Algorithm, ALGORITHMS, List};
 
 use std::pin::Pin;
 use std::ops::Coroutine;
@@ -485,7 +487,7 @@ fn Control(
             <hr class="fsep" />
             <p>
                 <span class="fake elem swp">"Blue"</span>
-                "Recently swapped"
+                "Swapped or merged"
             </p>
             <hr class="fsep" />
             <p>
@@ -495,7 +497,7 @@ fn Control(
             <hr class="fsep" />
             <p>
                 <span class="fake elem swp spc">"Glue"</span>
-                "Recently swapped special items"
+                "Swapped/merged special items"
             </p>
             <hr class="fsep" />
             <p>
@@ -526,7 +528,7 @@ fn Content(
         let max = values.clone().max().unwrap();
 
         values
-            .map(|v| (v - min) * 100 / (max - min))
+            .map(|v| (v - min) * 100 / (max - min).max(1))
             .enumerate()
             .collect::<Vec<_>>()
     };
@@ -689,7 +691,7 @@ fn Right(
                         <div popover id="swaps-expl">
                             <h1>"Element Swaps"</h1>
                             <hr class="bhr" />
-                            "Number of times a pair of elements were swapped whilst sorting."
+                            "Number of times a pair of elements were swapped/merged whilst sorting."
                         </div>
                     </td>
                     <td class="tiny m">{move || recorder.count_swaps()}</td>

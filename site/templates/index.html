@@ -3,8 +3,8 @@
 <!DOCTYPE html>
 <html lang="en-us">
 	<head>
-		<!-- <base href="/" /> -->
-		<base href="//tilde.team/~kiedtl/sorting/" />
+		<base href="/" />
+		<!-- <base href="//tilde.team/~kiedtl/sorting/" /> -->
 		<meta name="viewport" content="width=device-width,initial-scale=1" />
 		<meta http-equiv="content-type" content="text/html; charset=utf-8">
 		<link href="{% block fav %}{{ config.extra.favicon | safe }}{% endblock fav %}" rel=icon type=image/png>
@@ -241,6 +241,7 @@ hr {
   font-family: monospace;
   border: 2px solid #888;
   box-sizing: border-box;
+  background: #fff;
 }
 
 .elem.pad {
@@ -341,6 +342,26 @@ td.td-bar {
   margin: 0 0.2rem 0 0.2rem;
 }
 
+.mergesort-child-group {
+  width: 100% !important;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  margin-bottom: 0.2rem; /* Space for arrow */
+}
+
+.mergesort-child-group > .enclosure:first-child {
+  background: var(--acc-b);
+  border: 2px solid var(--acc-2);
+  padding: 0.2rem;
+}
+
+.mergesort-child-group > .enclosure:last-child {
+  background: var(--hih-f);
+  border: 2px solid var(--hih-6);
+  padding: 0.2rem;
+}
+
 .solo-group {
   border: 2px solid #0000;
   width: fit-content;
@@ -348,13 +369,14 @@ td.td-bar {
 }
 
 .group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
   border: 2px solid #888;
   border-radius: 0.3rem;
   justify-content: center;
-  display: flex;
-  flex-direction: column;
   width: fit-content;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.1rem;
   padding: 0.1rem 0 0.1rem 0;
 }
 

@@ -84,79 +84,6 @@ impl<Y> Iterator for Coro<Y> {
 //     }
 // }
 
-#[derive(Clone, Debug, Default)]
-pub struct RecorderState {
-    // comparisons: Arc<AtomicUsize>,
-    // swaps: Arc<AtomicUsize>,
-    comparisons: usize,
-    swaps: usize,
-    stack: Vec<&'static str>,
-    calls: usize,
-}
-
-impl RecorderState {
-    pub fn f_push(&mut self, name: &'static str) {
-        self.calls += 1;
-        self.stack.push(name);
-    }
-
-    pub fn f_pop(&mut self) -> Option<&'static str> {
-        self.stack.pop()
-    }
-
-    pub fn lt(&mut self, a: usize, b: usize) -> bool {
-        self.comparisons += 1;
-        a < b
-    }
-
-    pub fn gt(&mut self, a: usize, b: usize) -> bool {
-        self.comparisons += 1;
-        a > b
-    }
-
-    pub fn max<T: Copy>(&mut self, a: T, b: T, by: impl Fn(T) -> usize) -> T {
-        self.comparisons += 1;
-        if by(a) >= by(b) {
-            a
-        } else {
-            b
-        }
-    }
-
-    pub fn min(&mut self, a: usize, b: usize, by: impl Fn(usize) -> usize) -> usize {
-        self.comparisons += 1;
-        if by(a) <= by(b) {
-            a
-        } else {
-            b
-        }
-    }
-
-    pub fn swap(&mut self, x: &mut [usize], a: usize, b: usize) {
-        //self.swaps.fetch_add(1, Ordering::Relaxed);
-        self.swaps += 1;
-        x.swap(a, b);
-    }
-
-    pub fn count_comparisons(&self) -> usize {
-        //self.comparisons.load(Ordering::Relaxed)
-        self.comparisons
-    }
-
-    pub fn count_swaps(&self) -> usize {
-        //self.swaps.load(Ordering::Relaxed)
-        self.swaps
-    }
-
-    pub fn count_calls(&self) -> usize {
-        self.calls
-    }
-
-    pub fn get_call_stack(&self) -> &[&'static str] {
-        &self.stack
-    }
-}
-
 pub fn size_class(item_len: usize) -> &'static str {
     match item_len {
         00..15 => " z1",
@@ -254,7 +181,7 @@ where
     }
 }
 
-fn list_into_view(
+pub fn list_into_view(
     spadding: usize,
     epadding: usize,
     s: &[usize],
@@ -553,106 +480,6 @@ impl IsSnapshot for VHeap {
                         .collect_view()
                     }
                 // </div>
-            </div>
-        }.into_any()
-    }
-}
-
-#[derive(Clone)]
-pub struct VQuickLayer {
-    r: Range<usize>,
-    p: Option<usize>,
-}
-
-pub struct VQuick {
-    list: Box<[usize]>,
-    layers: Vec<VQuickLayer>,
-    swapped: Option<(usize, usize)>,
-    current: Option<usize>,
-    expl: String,
-    fleeting: bool,
-}
-
-impl VQuick {
-    pub fn new(list: Box<[usize]>, swapped: Option<(usize, usize)>, expl: impl Into<String>) -> Self {
-        VQuick {
-            list,
-            layers: Vec::new(),
-            swapped,
-            current: None,
-            expl: expl.into(),
-            fleeting: false,
-        }
-    }
-
-    pub fn layer(mut self, r: Range<usize>, p: Option<usize>) -> Self {
-        self.layers.push(VQuickLayer { r, p });
-        self
-    }
-
-    pub fn set_fleeting(mut self, value: bool) -> Self {
-        self.fleeting = value;
-        self
-    }
-
-    pub fn current(mut self, current: Option<usize>) -> Self {
-        self.current = current;
-        self
-    }
-}
-
-impl IsSnapshot for VQuick {
-    fn swapped(&self) -> Option<(usize, usize)> {
-        self.swapped
-    }
-
-    fn list(&self) -> &[usize] {
-        &self.list
-    }
-
-    fn is_fleeting(&self) -> bool {
-        self.fleeting
-    }
-
-    fn into_view(&self) -> AnyView {
-        let swapped = self.swapped; // captured by closure
-        let current = self.current; // captured by closure
-        let expl = self.expl.clone(); // captured by closure
-
-        let list = self.list.clone();
-        let layers = self.layers.clone();
-
-        view! {
-            <div class="group">
-                {move || {
-                    let mut swapped = swapped;
-                    let mut current = current;
-                    let mut expl = (!expl.is_empty()).then(|| expl.clone());
-                    layers.iter().map(|l| {
-                        view! {
-                            <div class="enclosure">
-                                {list_into_view(
-                                    l.r.start,
-                                    list.len() - l.r.end,
-                                    &list[l.r.clone()],
-
-                                    // Show swapped elements only for first layer.
-                                    swapped.take(),
-
-                                    l.p.map(|p| p - l.r.start),
-
-                                    // Show current element only for first layer.
-                                    current.take(),
-                                )}
-                            </div>
-                            <div class="enclosure">
-                                {expl.take().map(|expl| view! {
-                                    <p class="expl">{expl}</p>
-                                })}
-                            </div>
-                        }
-                    }).collect_view()
-                }}
             </div>
         }.into_any()
     }
