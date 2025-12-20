@@ -58,7 +58,7 @@ A rough list of new features that will eventually be added (*contributions
 welcome*).
 
 1. Common/basic sorting algorithms.
-   - Mergesort
+   - ~~Mergesort~~
    - Shellsort
    - Counting, bucket, radix sort
 3. Ability to set algorithm-specific options.
