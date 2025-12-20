@@ -66,6 +66,10 @@ impl Recorder {
     pub fn count_calls(&self) -> usize {
         self.1.read().count_calls()
     }
+
+    pub fn count_max_stack_depth(&self) -> usize {
+        self.1.read().count_max_stack_depth()
+    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -76,12 +80,15 @@ pub struct RecorderState {
     swaps: usize,
     stack: Vec<&'static str>,
     calls: usize,
+    max_stack_depth: usize,
 }
 
 impl RecorderState {
     pub fn f_push(&mut self, name: &'static str) {
         self.calls += 1;
         self.stack.push(name);
+
+        self.max_stack_depth = self.max_stack_depth.max(self.stack.len());
     }
 
     pub fn f_pop(&mut self) -> Option<&'static str> {
@@ -138,6 +145,10 @@ impl RecorderState {
 
     pub fn count_calls(&self) -> usize {
         self.calls
+    }
+
+    pub fn count_max_stack_depth(&self) -> usize {
+        self.max_stack_depth
     }
 
     pub fn get_call_stack(&self) -> &[&'static str] {

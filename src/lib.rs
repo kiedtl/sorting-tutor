@@ -713,6 +713,19 @@ fn Right(
                     </td>
                     <td class="tiny m">{move || recorder.count_calls()}</td>
                 </tr>
+                <tr>
+                    <td>
+                        <label>"Stack depth"</label>
+                        <button class="tip" popovertarget="max-stack-depth-expl">?</button>
+                        <div popover id="max-stack-depth-expl">
+                            <h1>"Maximum stack depth"</h1>
+                            <hr class="bhr" />
+                            "Maximum stack depth, including contributions from both recursive and non-recursive calls."
+                            and general 
+                        </div>
+                    </td>
+                    <td class="tiny m">{move || recorder.count_max_stack_depth()}</td>
+                </tr>
                 </tbody>
             </table>
         </div>
