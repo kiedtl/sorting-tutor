@@ -13,13 +13,12 @@ pub type List = Box<[usize]>;
 pub type SortingCoro = Pin<Box<dyn Coroutine<(), Yield = Snapshot, Return = ()>>>;
 
 pub const ALGORITHMS: &[Algorithm] = &[
-    // First is default
-    Algorithm::Merge,
-    Algorithm::Heap,
-    Algorithm::Insertion,
-    Algorithm::Quick,
     Algorithm::Selection,
     Algorithm::Bubble,
+    Algorithm::Insertion,
+    Algorithm::Quick,
+    Algorithm::Heap,
+    Algorithm::Merge,
 ];
 
 #[derive(Copy, Clone, Default)]
@@ -28,9 +27,9 @@ pub enum Algorithm {
     Selection,
     Insertion,
     Quick,
+    #[default]
     Heap,
     //Stalin,
-    #[default]
     Merge,
     //Tim,
     //Drift,
