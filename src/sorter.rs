@@ -1,6 +1,7 @@
 pub mod heap;
 pub mod merge;
 pub mod quick;
+pub mod shell;
 
 use crate::for_coro;
 use crate::recorder::Recorder;
@@ -16,6 +17,7 @@ pub const ALGORITHMS: &[Algorithm] = &[
     Algorithm::Selection,
     Algorithm::Bubble,
     Algorithm::Insertion,
+    Algorithm::Shell,
     Algorithm::Quick,
     Algorithm::Heap,
     Algorithm::Merge,
@@ -26,6 +28,7 @@ pub enum Algorithm {
     Bubble,
     Selection,
     Insertion,
+    Shell,
     Quick,
     #[default]
     Heap,
@@ -41,6 +44,7 @@ impl Algorithm {
             Algorithm::Bubble => |v, r| Box::pin(bubble(v, r)),
             Algorithm::Selection => |v, r| Box::pin(selection(v, r)),
             Algorithm::Insertion => |v, r| Box::pin(insertion(v, r)),
+            Algorithm::Shell => |v, r| Box::pin(shell::sort(v, r)),
             Algorithm::Heap => |v, r| Box::pin(heap(v, r)),
             Algorithm::Quick => |v, r| Box::pin(quick::sort(v, r)),
             Algorithm::Merge => |v, r| Box::pin(merge::sort(v, r)),
@@ -54,6 +58,7 @@ impl std::fmt::Display for Algorithm {
             Algorithm::Bubble => "bubble",
             Algorithm::Selection => "selection",
             Algorithm::Insertion => "insertion",
+            Algorithm::Shell => "shellsort",
             Algorithm::Heap => "heapsort",
             Algorithm::Quick => "quicksort",
             Algorithm::Merge => "mergesort",

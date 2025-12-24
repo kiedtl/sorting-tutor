@@ -59,7 +59,7 @@ welcome*).
 
 1. Common/basic sorting algorithms.
    - ~~Mergesort~~
-   - Shellsort
+   - ~~Shellsort~~
    - Counting, bucket, radix sort
 3. Ability to set algorithm-specific options.
    - ex. Pivot heuristic for Quicksort (Lomuto, median-of-three, median-of-nine,

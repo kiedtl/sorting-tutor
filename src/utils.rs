@@ -265,8 +265,8 @@ impl VList {
         self
     }
 
-    pub fn expl(mut self, expl: String) -> Self {
-        self.expl = Some(expl);
+    pub fn expl(mut self, expl: impl Into<String>) -> Self {
+        self.expl = Some(expl.into());
         self
     }
 }
@@ -281,11 +281,21 @@ impl IsSnapshot for VList {
     }
 
     fn into_view(&self) -> AnyView {
+        let expl = self.expl.clone();
+        let class = if expl.is_some() { "group" } else { "solo-group" };
+
         view! {
-            <div class="solo-group">
+            <div class=class>
                 <div class="enclosure">
                     {list_into_view(0, 0, &self.list, self.swapped, self.special, self.current)}
                 </div>
+                {expl.clone().map(|expl| {
+                    html::div()
+                        .class("enclosure")
+                        .child(
+                            html::p().class("expl").child(expl)
+                        )
+                })}
             </div>
         }.into_any()
     }

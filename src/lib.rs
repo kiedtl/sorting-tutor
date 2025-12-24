@@ -686,10 +686,10 @@ fn Right(
                 </tr>
                 <tr>
                     <td>
-                        <label>"Swaps"</label>
+                        <label>"Swaps/Merges"</label>
                         <button class="tip" popovertarget="swaps-expl">?</button>
                         <div popover id="swaps-expl">
-                            <h1>"Element Swaps"</h1>
+                            <h1>"Element Swaps & Merges"</h1>
                             <hr class="bhr" />
                             "Number of times a pair of elements were swapped/merged whilst sorting."
                         </div>

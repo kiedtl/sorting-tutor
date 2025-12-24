@@ -51,6 +51,10 @@ impl Recorder {
         self.0.write().swap(x, a, b)
     }
 
+    pub fn record_swap(&self) {
+        self.0.write().record_swap();
+    }
+
     pub fn record_merge(&self) {
         self.0.write().record_merge();
     }
@@ -127,6 +131,10 @@ impl RecorderState {
         //self.swaps.fetch_add(1, Ordering::Relaxed);
         self.swaps += 1;
         x.swap(a, b);
+    }
+
+    pub fn record_swap(&mut self) {
+        self.swaps += 1;
     }
 
     pub fn record_merge(&mut self) {
